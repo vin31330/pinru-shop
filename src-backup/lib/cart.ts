@@ -6,7 +6,7 @@ export function loadCart(): CartItem[] {
   if (typeof window === "undefined") return [];
 
   try {
-    const raw = localStorage.getItem(CART_KEY);
+    const raw = window.localStorage.getItem(CART_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -14,8 +14,21 @@ export function loadCart(): CartItem[] {
 }
 
 export function saveCart(items: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CART_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event("pinru-cart-updated"));
+}
+
+export function buildCartId(
+  productId: string,
+  selectedOptions: Record<string, string>,
+) {
+  const optionText = Object.entries(selectedOptions)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}:${value}`)
+    .join("|");
+
+  return `${productId}::${optionText}`;
 }
 
 export function addProductToCart(
@@ -23,14 +36,10 @@ export function addProductToCart(
   quantity: number,
   selectedOptions: Record<string, string>,
 ) {
-  const optionKey = Object.entries(selectedOptions)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}:${value}`)
-    .join("|");
-
-  const cartId = `${product.id}::${optionKey}`;
   const items = loadCart();
+  const cartId = buildCartId(product.id, selectedOptions);
   const existing = items.find((item) => item.cartId === cartId);
+  const unitPrice = product.salePrice ?? product.price;
 
   if (existing) {
     existing.quantity += quantity;
@@ -39,8 +48,8 @@ export function addProductToCart(
       cartId,
       productId: product.id,
       name: product.name,
-      imageUrl: product.mainImage,
-      unitPrice: product.salePrice ?? product.price,
+      imageEmoji: product.imageEmoji,
+      unitPrice,
       quantity,
       selectedOptions,
     });

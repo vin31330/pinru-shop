@@ -5,10 +5,10 @@ import { Product } from "@/types/product";
 const currency = new Intl.NumberFormat("zh-TW");
 
 export default function ProductCard({ product }: { product: Product }) {
-  const price = product.salePrice ?? product.price;
+  const activePrice = product.salePrice ?? product.price;
 
   return (
-    <article className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <Link href={`/products/${encodeURIComponent(product.id)}`}>
         <ProductImage
           src={product.mainImage}
@@ -42,18 +42,18 @@ export default function ProductCard({ product }: { product: Product }) {
               NT${currency.format(product.price)}
             </div>
             <div className="text-lg font-black text-rose-600">
-              NT${currency.format(price)}
+              NT${currency.format(activePrice)}
             </div>
           </div>
         ) : (
           <div className="mt-2 text-lg font-black text-emerald-700">
-            NT${currency.format(price)}
+            NT${currency.format(activePrice)}
           </div>
         )}
 
         <Link
           href={`/products/${encodeURIComponent(product.id)}`}
-          className="mt-3 block rounded-xl bg-emerald-600 px-3 py-2.5 text-center text-sm font-bold text-white"
+          className="mt-3 block w-full rounded-xl bg-emerald-600 px-3 py-2.5 text-center text-sm font-bold text-white"
         >
           查看商品
         </Link>

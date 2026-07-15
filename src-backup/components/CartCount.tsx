@@ -8,7 +8,8 @@ export default function CartCount() {
 
   useEffect(() => {
     const update = () => {
-      setCount(loadCart().reduce((sum, item) => sum + item.quantity, 0));
+      const total = loadCart().reduce((sum, item) => sum + item.quantity, 0);
+      setCount(total);
     };
 
     update();

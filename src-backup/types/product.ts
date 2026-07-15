@@ -3,13 +3,6 @@ export type ProductOption = {
   values: string[];
 };
 
-export type ProductMedia = {
-  id: string;
-  type: "image" | "video";
-  url: string;
-  order: number;
-};
-
 export type Product = {
   id: string;
   name: string;
@@ -18,8 +11,9 @@ export type Product = {
   tags: string[];
   price: number;
   salePrice?: number;
-  mainImage?: string;
-  media: ProductMedia[];
+  imageEmoji: string;
+  images: string[];
+  videos: string[];
   options: ProductOption[];
   published: boolean;
   featured?: boolean;
@@ -31,7 +25,7 @@ export type CartItem = {
   cartId: string;
   productId: string;
   name: string;
-  imageUrl?: string;
+  imageEmoji: string;
   unitPrice: number;
   quantity: number;
   selectedOptions: Record<string, string>;

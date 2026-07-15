@@ -14,11 +14,10 @@ type ProductPageProps = {
 
 const currency = new Intl.NumberFormat("zh-TW");
 
-function youtubeEmbed(url: string) {
+function youtubeEmbedUrl(url: string) {
   const match = url.match(
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&?/]+)/,
   );
-
   return match ? `https://www.youtube.com/embed/${match[1]}` : "";
 }
 
@@ -34,13 +33,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
   return (
     <main className="min-h-screen bg-slate-50">
       <Header />
-
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <Link href="/products" className="font-bold text-emerald-700">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+        <Link
+          href="/products"
+          className="mb-5 inline-block font-bold text-emerald-700"
+        >
           ← 返回全部商品
         </Link>
 
-        <div className="mt-5 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <section>
             <ProductImage
               src={product.mainImage}
@@ -55,24 +56,23 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     key={image.id}
                     src={image.url}
                     alt={product.name}
-                    className="aspect-square w-full rounded-xl border"
+                    className="aspect-square w-full rounded-xl border border-slate-200"
                   />
                 ))}
               </div>
             )}
 
             {videos.length > 0 && (
-              <div className="mt-6 rounded-3xl border bg-white p-5">
+              <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="text-xl font-black">商品影片</h2>
                 <div className="mt-3 space-y-4">
                   {videos.map((video) => {
-                    const embed = youtubeEmbed(video.url);
-
+                    const embed = youtubeEmbedUrl(video.url);
                     return embed ? (
                       <iframe
                         key={video.id}
                         src={embed}
-                        title={product.name}
+                        title={`${product.name}商品影片`}
                         className="aspect-video w-full rounded-2xl"
                         allowFullScreen
                       />
@@ -94,45 +94,45 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </section>
 
           <section>
-            <div className="mb-5 flex flex-wrap gap-2">
-              {product.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
+            <div className="mb-5">
+              <div className="mb-3 flex flex-wrap gap-2">
+                {product.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
 
-            <h1 className="text-3xl font-black">{product.name}</h1>
+              <h1 className="text-3xl font-black">{product.name}</h1>
+              <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
+                {product.description || "商品詳細內容請洽 LINE 官方帳號。"}
+              </p>
 
-            <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
-              {product.description}
-            </p>
-
-            <div className="my-5">
-              {product.salePrice ? (
-                <>
-                  <div className="text-sm text-slate-400 line-through">
-                    原價 NT${currency.format(product.price)}
+              <div className="mt-5">
+                {product.salePrice ? (
+                  <>
+                    <div className="text-sm text-slate-400 line-through">
+                      原價 NT${currency.format(product.price)}
+                    </div>
+                    <div className="text-3xl font-black text-rose-600">
+                      特價 NT${currency.format(product.salePrice)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-3xl font-black text-emerald-700">
+                    NT${currency.format(product.price)}
                   </div>
-                  <div className="text-3xl font-black text-rose-600">
-                    特價 NT${currency.format(product.salePrice)}
-                  </div>
-                </>
-              ) : (
-                <div className="text-3xl font-black text-emerald-700">
-                  NT${currency.format(product.price)}
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <AddToCartPanel product={product} />
           </section>
         </div>
       </div>
-
       <Footer />
     </main>
   );
