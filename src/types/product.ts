@@ -1,6 +1,22 @@
-export type ProductOption = {
+export type ProductOption = { name: string; values: string[] };
+
+export type PricingPlanOption = {
+  id: string;
+  groupName: string;
+  optionValue: string;
+  price: number;
+  order: number;
+};
+
+export type PricingPlan = {
+  id: string;
   name: string;
-  values: string[];
+  quantity: number;
+  price: number;
+  isDefault: boolean;
+  selectOptionsPerItem: boolean;
+  order: number;
+  optionPrices: PricingPlanOption[];
 };
 
 export type ProductMedia = {
@@ -8,6 +24,7 @@ export type ProductMedia = {
   type: "image" | "video";
   url: string;
   order: number;
+  thumbnailUrl?: string;
 };
 
 export type Product = {
@@ -21,6 +38,7 @@ export type Product = {
   mainImage?: string;
   media: ProductMedia[];
   options: ProductOption[];
+  pricingPlans: PricingPlan[];
   published: boolean;
   featured?: boolean;
   isNew?: boolean;
