@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ProductImage from "@/components/ProductImage";
 import { ProductMedia } from "@/types/product";
 
@@ -18,18 +18,34 @@ type GalleryItem =
       label: string;
     };
 
-type VideoKind =
-  | { kind: "youtube"; url: string }
-  | { kind: "drive"; url: string }
-  | { kind: "native"; url: string }
-  | { kind: "link"; url: string };
+type VideoInfo =
+  | {
+      kind: "youtube";
+      playUrl: string;
+      thumbnailUrl: string;
+    }
+  | {
+      kind: "drive";
+      playUrl: string;
+      thumbnailUrl: string;
+    }
+  | {
+      kind: "native";
+      playUrl: string;
+      thumbnailUrl?: string;
+    }
+  | {
+      kind: "link";
+      playUrl: string;
+      thumbnailUrl?: string;
+    };
 
-function parseYoutubeId(url: string): string {
+function getYoutubeId(url: string): string {
   try {
     const parsed = new URL(url);
 
     if (parsed.hostname.includes("youtu.be")) {
-      return parsed.pathname.replace("/", "").split("/")[0] ?? "";
+      return parsed.pathname.split("/").filter(Boolean)[0] ?? "";
     }
 
     if (parsed.hostname.includes("youtube.com")) {
@@ -51,10 +67,10 @@ function parseYoutubeId(url: string): string {
 }
 
 function getGoogleDriveFileId(url: string): string {
-  const filePathMatch = url.match(/\/file\/d\/([^/?]+)/);
+  const pathMatch = url.match(/\/file\/d\/([^/?]+)/);
 
-  if (filePathMatch) {
-    return filePathMatch[1];
+  if (pathMatch) {
+    return pathMatch[1];
   }
 
   try {
@@ -65,13 +81,14 @@ function getGoogleDriveFileId(url: string): string {
   }
 }
 
-function resolveVideo(url: string): VideoKind {
-  const youtubeId = parseYoutubeId(url);
+function resolveVideo(url: string): VideoInfo {
+  const youtubeId = getYoutubeId(url);
 
   if (youtubeId) {
     return {
       kind: "youtube",
-      url: `https://www.youtube.com/embed/${youtubeId}?rel=0`,
+      playUrl: `https://www.youtube.com/embed/${youtubeId}?rel=0&playsinline=1`,
+      thumbnailUrl: `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`,
     };
   }
 
@@ -79,58 +96,109 @@ function resolveVideo(url: string): VideoKind {
 
   if (
     driveId &&
-    (url.includes("drive.google.com") || url.includes("googleusercontent.com"))
+    (url.includes("drive.google.com") ||
+      url.includes("googleusercontent.com"))
   ) {
     return {
       kind: "drive",
-      url: `https://drive.google.com/file/d/${driveId}/preview`,
+      playUrl: `https://drive.google.com/file/d/${driveId}/preview`,
+      thumbnailUrl: `https://drive.google.com/thumbnail?id=${driveId}&sz=w500`,
     };
   }
 
   if (/\.(mp4|webm|ogg|mov)(?:[?#].*)?$/i.test(url)) {
     return {
       kind: "native",
-      url,
+      playUrl: url,
     };
   }
 
   return {
     kind: "link",
-    url,
+    playUrl: url,
   };
+}
+
+function withPlaybackSession(url: string, sessionKey: string): string {
+  if (!sessionKey) return url;
+
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("pinruVideoSession", sessionKey);
+    return parsed.toString();
+  } catch {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}pinruVideoSession=${encodeURIComponent(sessionKey)}`;
+  }
+}
+
+function VideoThumbnail({
+  url,
+  label,
+}: {
+  url: string;
+  label: string;
+}) {
+  const video = resolveVideo(url);
+
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-slate-900">
+      {video.thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={video.thumbnailUrl}
+          alt={label}
+          className="h-full w-full object-cover"
+        />
+      ) : video.kind === "native" ? (
+        <video
+          src={video.playUrl}
+          muted
+          playsInline
+          preload="metadata"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-950" />
+      )}
+
+      <div className="absolute inset-0 grid place-items-center bg-black/20">
+        <span className="grid h-10 w-10 place-items-center rounded-full bg-white/90 pl-0.5 text-xl text-slate-900 shadow">
+          ▶
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function ProductGallery({
   productName,
-  mainImage,
   media,
 }: {
   productName: string;
+  /**
+   * 保留此參數以相容目前 page.tsx，但商品詳情頁不會使用商品總表主圖。
+   */
   mainImage?: string;
   media: ProductMedia[];
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
-  const touchStartX = useRef<number | null>(null);
+  const [interactive, setInteractive] = useState(false);
+  const [videoSessionKey, setVideoSessionKey] = useState("");
+  const activePlayerHost = useRef<HTMLDivElement>(null);
+  const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const lastSwipeAt = useRef(0);
+  const suppressImageClick = useRef(false);
 
   const items = useMemo<GalleryItem[]>(() => {
     const result: GalleryItem[] = [];
-
-    if (mainImage) {
-      result.push({
-        id: "main-image",
-        type: "image",
-        url: mainImage,
-        label: "主要圖片",
-      });
-    }
 
     for (const item of media ?? []) {
       if (!item?.url) continue;
 
       if (item.type === "image") {
-        if (item.url === mainImage) continue;
-
         result.push({
           id: item.id,
           type: "image",
@@ -156,13 +224,92 @@ export default function ProductGallery({
     }
 
     return result;
-  }, [mainImage, media]);
+  }, [media]);
 
   const current = items[currentIndex] ?? items[0];
 
+  useEffect(() => {
+    let sessionSequence = 0;
+
+    function stopActivePlayer() {
+      const player = activePlayerHost.current?.querySelector<
+        HTMLIFrameElement | HTMLVideoElement
+      >("[data-active-video-player]");
+
+      if (player instanceof HTMLVideoElement) {
+        player.pause();
+        player.removeAttribute("src");
+        player.load();
+      } else if (player instanceof HTMLIFrameElement) {
+        player.src = "about:blank";
+      }
+    }
+
+    function startFreshPlayerSession() {
+      sessionSequence += 1;
+      setVideoSessionKey(`${Date.now()}-${sessionSequence}`);
+      setInteractive(true);
+    }
+
+    function handlePageShow() {
+      startFreshPlayerSession();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        startFreshPlayerSession();
+      } else {
+        stopActivePlayer();
+        setInteractive(false);
+      }
+    }
+
+    setCurrentIndex(0);
+    setFullscreen(false);
+    startFreshPlayerSession();
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopActivePlayer();
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [productName]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFullscreen(false);
+      }
+
+      if (event.key === "ArrowRight") {
+        setCurrentIndex((index) => (index + 1) % items.length);
+      }
+
+      if (event.key === "ArrowLeft") {
+        setCurrentIndex(
+          (index) => (index - 1 + items.length) % items.length
+        );
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [fullscreen, items.length]);
+
+
   function goTo(index: number) {
-    const normalized = (index + items.length) % items.length;
-    setCurrentIndex(normalized);
+    setCurrentIndex((index + items.length) % items.length);
   }
 
   function next() {
@@ -173,36 +320,129 @@ export default function ProductGallery({
     goTo(currentIndex - 1);
   }
 
-  function handleTouchStart(event: React.TouchEvent) {
-    touchStartX.current = event.touches[0]?.clientX ?? null;
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const target = event.target as Element;
+    if (target.closest("[data-gallery-control]")) {
+      pointerStart.current = null;
+      return;
+    }
+    pointerStart.current = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    suppressImageClick.current = false;
   }
 
-  function handleTouchEnd(event: React.TouchEvent) {
-    if (touchStartX.current === null) return;
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const start = pointerStart.current;
+    pointerStart.current = null;
+    if (!start || start.id !== event.pointerId) return;
 
-    const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
-    const difference = touchStartX.current - endX;
+    const differenceX = start.x - event.clientX;
+    const differenceY = start.y - event.clientY;
+    performSwipe(differenceX, differenceY);
+  }
 
-    if (Math.abs(difference) > 45) {
-      difference > 0 ? next() : previous();
+  function handlePointerCancel() {
+    pointerStart.current = null;
+    suppressImageClick.current = false;
+  }
+
+  function performSwipe(differenceX: number, differenceY: number) {
+    const isHorizontalSwipe =
+      Math.abs(differenceX) >= 36 &&
+      Math.abs(differenceX) > Math.abs(differenceY);
+    if (!isHorizontalSwipe) return;
+
+    const now = Date.now();
+    if (now - lastSwipeAt.current < 300) return;
+    lastSwipeAt.current = now;
+    suppressImageClick.current = true;
+    if (differenceX > 0) {
+      next();
+    } else {
+      previous();
+    }
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    const point = event.touches[0];
+    touchStart.current = point
+      ? { x: point.clientX, y: point.clientY }
+      : null;
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    const point = event.changedTouches[0];
+    if (!start || !point) return;
+    performSwipe(start.x - point.clientX, start.y - point.clientY);
+  }
+
+  function handleTouchCancel() {
+    touchStart.current = null;
+  }
+
+  function openFullscreen() {
+    if (suppressImageClick.current) {
+      suppressImageClick.current = false;
+      return;
+    }
+    setFullscreen(true);
+  }
+
+  function activateCurrentMedia(event?: React.SyntheticEvent<HTMLElement>) {
+    const target = event?.target as Element | undefined;
+    if (target?.closest("[data-gallery-control]")) return;
+
+    if (suppressImageClick.current) {
+      suppressImageClick.current = false;
+      return;
     }
 
-    touchStartX.current = null;
+    if (current.type === "image") openFullscreen();
   }
 
-  function renderVideo(url: string, fullscreenMode: boolean) {
+  function handleStageKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (current.type !== "image") return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    activateCurrentMedia(event);
+  }
+
+  function renderVideo(
+    item: Extract<GalleryItem, { type: "video" }>,
+    fullscreenMode: boolean,
+  ) {
+    const { url } = item;
     const video = resolveVideo(url);
     const frameClass = fullscreenMode
       ? "aspect-video max-h-[82vh] w-full"
       : "h-full w-full";
 
+    if (!interactive) {
+      return (
+        <div className="grid h-full w-full place-items-center bg-slate-900 text-base font-black text-white">
+          影片載入中…
+        </div>
+      );
+    }
+
     if (video.kind === "youtube" || video.kind === "drive") {
       return (
         <iframe
-          src={video.url}
+          key={`${item.id}-${videoSessionKey}`}
+          src={withPlaybackSession(video.playUrl, videoSessionKey)}
           title={`${productName} 商品影片`}
+          data-active-video-player
           className={`${frameClass} border-0 bg-black`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          loading="eager"
           allowFullScreen
         />
       );
@@ -211,21 +451,21 @@ export default function ProductGallery({
     if (video.kind === "native") {
       return (
         <video
-          src={video.url}
+          key={`${item.id}-${videoSessionKey}`}
+          src={video.playUrl}
+          data-active-video-player
           controls
           playsInline
           preload="metadata"
           className={`${frameClass} bg-black object-contain`}
-        >
-          您的瀏覽器不支援影片播放。
-        </video>
+        />
       );
     }
 
     return (
-      <div className="grid h-full w-full place-items-center bg-slate-900 p-6 text-center">
+      <div className="grid h-full w-full place-items-center bg-slate-900 p-6">
         <a
-          href={video.url}
+          href={video.playUrl}
           target="_blank"
           rel="noreferrer"
           className="rounded-2xl bg-white px-5 py-3 font-black text-slate-900"
@@ -243,39 +483,57 @@ export default function ProductGallery({
           <ProductImage
             src={current.url}
             alt={`${productName} ${current.label}`}
-            className="max-h-[85vh] w-full rounded-2xl"
+            className="h-full w-full rounded-2xl bg-transparent"
           />
         );
       }
 
       return (
-        <button
-          type="button"
-          onClick={() => setFullscreen(true)}
-          className="block h-full w-full"
-          aria-label="放大商品圖片"
-        >
+        <div className="relative block h-full w-full cursor-zoom-in">
           <ProductImage
             src={current.url}
             alt={`${productName} ${current.label}`}
             className="h-full w-full rounded-none"
           />
-        </button>
+          <span className="absolute bottom-3 left-3 z-10 rounded-full bg-black/65 px-4 py-2 text-sm font-black text-white">
+            點擊放大圖片
+          </span>
+        </div>
       );
     }
 
-    return renderVideo(current.url, fullscreenMode);
+    return renderVideo(current, fullscreenMode);
   }
 
   return (
     <>
-      <section className="min-w-0 max-w-full overflow-hidden">
+      <section
+        data-product-gallery
+        data-interactive-ready={interactive ? "true" : "false"}
+        className="product-interaction-layer min-w-0 max-w-full overflow-hidden"
+      >
         <div
-          className="relative aspect-square w-full max-w-full overflow-hidden rounded-3xl bg-white shadow-sm"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+          data-product-gallery-stage
+          data-current-media-type={current.type}
+          data-current-media-index={currentIndex}
+          className="relative aspect-square w-full touch-pan-y overflow-hidden rounded-3xl bg-white shadow-sm"
+          role="button"
+          tabIndex={interactive ? 0 : -1}
+          aria-label={
+            current.type === "image"
+              ? `放大${productName}商品圖片`
+              : `${productName}商品影片`
+          }
+          onClick={activateCurrentMedia}
+          onKeyDown={handleStageKeyDown}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onTouchStartCapture={handleTouchStart}
+          onTouchEndCapture={handleTouchEnd}
+          onTouchCancelCapture={handleTouchCancel}
         >
-          <div className="h-full w-full overflow-hidden">
+          <div ref={activePlayerHost} className="h-full w-full overflow-hidden">
             {renderCurrent()}
           </div>
 
@@ -283,18 +541,20 @@ export default function ProductGallery({
             <>
               <button
                 type="button"
+                data-gallery-control
                 onClick={previous}
-                aria-label="上一個媒體"
-                className="absolute left-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-2xl font-black text-white backdrop-blur"
+                className="absolute left-3 top-1/2 z-10 grid h-11 w-11 touch-manipulation -translate-y-1/2 place-items-center rounded-full bg-black/55 text-2xl font-black text-white disabled:opacity-50"
+                aria-label="上一個商品媒體"
               >
                 ‹
               </button>
 
               <button
                 type="button"
+                data-gallery-control
                 onClick={next}
-                aria-label="下一個媒體"
-                className="absolute right-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-2xl font-black text-white backdrop-blur"
+                className="absolute right-3 top-1/2 z-10 grid h-11 w-11 touch-manipulation -translate-y-1/2 place-items-center rounded-full bg-black/55 text-2xl font-black text-white disabled:opacity-50"
+                aria-label="下一個商品媒體"
               >
                 ›
               </button>
@@ -306,18 +566,20 @@ export default function ProductGallery({
           )}
         </div>
 
-        <div className="mt-3 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-2">
+        <div className="mt-3 flex max-w-full gap-2 overflow-x-auto pb-2">
           {items.map((item, index) => (
             <button
               key={`${item.id}-${index}`}
               type="button"
+              data-gallery-control
+              data-gallery-thumbnail={index}
+              data-gallery-media-type={item.type}
               onClick={() => goTo(index)}
-              className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white ${
+              className={`relative h-20 w-20 shrink-0 touch-manipulation overflow-hidden rounded-xl border-2 bg-white disabled:opacity-60 ${
                 index === currentIndex
                   ? "border-emerald-600"
                   : "border-slate-200"
               }`}
-              aria-label={`切換到第 ${index + 1} 個媒體`}
             >
               {item.type === "image" ? (
                 <ProductImage
@@ -326,9 +588,10 @@ export default function ProductGallery({
                   className="h-full w-full rounded-none"
                 />
               ) : (
-                <div className="grid h-full w-full place-items-center bg-slate-900 text-2xl text-white">
-                  ▶
-                </div>
+                <VideoThumbnail
+                  url={item.url}
+                  label={`${productName}影片縮圖`}
+                />
               )}
             </button>
           ))}
@@ -343,44 +606,67 @@ export default function ProductGallery({
 
       {fullscreen && current.type === "image" && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/95 p-4"
-          role="dialog"
-          aria-modal="true"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+          className="fixed inset-x-0 top-0 z-[100] flex h-dvh items-center justify-center bg-black/95 p-4"
+          onClick={() => setFullscreen(false)}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onTouchStartCapture={handleTouchStart}
+          onTouchEndCapture={handleTouchEnd}
+          onTouchCancelCapture={handleTouchCancel}
         >
           <button
             type="button"
-            onClick={() => setFullscreen(false)}
-            className="absolute right-4 top-4 z-20 grid h-12 w-12 place-items-center rounded-full bg-white/15 text-3xl text-white"
+            data-gallery-control
+            onClick={(event) => {
+              event.stopPropagation();
+              setFullscreen(false);
+            }}
+            className="gallery-close-button absolute right-4 z-50 inline-flex min-h-12 min-w-24 touch-manipulation items-center justify-center gap-2 rounded-full border-2 border-white bg-white px-4 text-base font-black text-slate-900 shadow-2xl"
             aria-label="關閉放大圖片"
           >
-            ×
+            <span className="text-2xl leading-none" aria-hidden="true">×</span>
+            關閉
           </button>
 
           {items.length > 1 && (
             <>
               <button
                 type="button"
-                onClick={previous}
-                className="absolute left-3 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-3xl text-white"
-                aria-label="上一張"
+                data-gallery-control
+                onClick={(event) => {
+                  event.stopPropagation();
+                  previous();
+                }}
+                className="absolute left-3 top-1/2 z-30 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-3xl font-black text-white sm:left-6"
+                aria-label="上一張圖片"
               >
                 ‹
               </button>
 
               <button
                 type="button"
-                onClick={next}
-                className="absolute right-3 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/15 text-3xl text-white"
-                aria-label="下一張"
+                data-gallery-control
+                onClick={(event) => {
+                  event.stopPropagation();
+                  next();
+                }}
+                className="absolute right-3 top-1/2 z-30 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-3xl font-black text-white sm:right-6"
+                aria-label="下一張圖片"
               >
                 ›
               </button>
+
+              <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm font-bold text-white">
+                {currentIndex + 1} / {items.length}
+              </div>
             </>
           )}
 
-          <div className="max-h-[90vh] w-full max-w-6xl overflow-hidden">
+          <div
+            className="h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl pt-14"
+            onClick={(event) => event.stopPropagation()}
+          >
             {renderCurrent(true)}
           </div>
         </div>

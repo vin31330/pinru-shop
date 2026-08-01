@@ -10,6 +10,10 @@ export const SHEET_NAMES = {
   pricingPlanOptions: "Pricing Plan Options",
   activities: "Activities",
   activityProducts: "Activity Products",
+  homepageSections: "HomepageSections",
+  homepageBanners: "HomepageBanners",
+  categories: "Categories",
+  settings: "Settings",
 } as const;
 
 function parseCsv(csv: string): string[][] {
@@ -93,6 +97,10 @@ export async function readSheet(
     "方案規格價格ID",
     "活動ID",
     "活動商品ID",
+    "BannerID",
+    "首頁項目ID",
+    "分類ID",
+    "設定鍵",
   ];
 
   const headerIndex = rows.findIndex((row) =>

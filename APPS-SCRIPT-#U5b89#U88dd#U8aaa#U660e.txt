@@ -1,0 +1,23 @@
+【Apps Script】
+1. API.gs：整個檔案覆蓋原本 API.gs
+2. Router.gs：整個檔案覆蓋原本 Router.gs
+3. Orders.gs：整個檔案覆蓋原本 Orders.gs
+4. LineNotification.gs：新增檔案
+5. EmailNotification.gs：新增檔案
+6. OrderQuery.gs：新增檔案
+
+【指令碼屬性】
+Apps Script 左側「專案設定」→「指令碼屬性」新增：
+LINE_CHANNEL_ACCESS_TOKEN = LINE Messaging API 長期權杖
+LINE_ADMIN_USER_ID = 接收通知者的 U 開頭 User ID
+ORDER_ADMIN_URL = AppSheet 訂單後台網址（可留白）
+ORDER_NOTIFICATION_EMAIL = 收件信箱（Email 可最後再設定）
+
+【重新部署】
+部署 → 管理部署作業 → 編輯 → 版本選「新版本」→ 部署。
+網址仍使用原本 /exec 網址，不需要更換 .env.local。
+
+【測試】
+先執行 testRouter()。
+再執行 testLineNotification_() 測試 LINE。
+最後從網站建立一筆正式測試訂單。

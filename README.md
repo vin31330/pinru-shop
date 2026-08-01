@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 世界好用 小新和品儒購物網站
 
-## Getting Started
+## Windows 第一次使用
 
-First, run the development server:
+1. 解壓縮整個專案。
+2. 雙擊 `START-WINDOWS.bat`。
+3. 第一次啟動時會自動安裝套件並建立正式測試版本。
+4. 看到啟動完成後，瀏覽器開啟 `http://localhost:3000`。
+
+也可在命令提示字元執行：
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 正式建置檢查
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+或雙擊 `BUILD-WINDOWS.bat`。
 
-## Learn More
+## 首頁資料來源
 
-To learn more about Next.js, take a look at the following resources:
+- 優惠活動：`Activities`
+- 熱銷商品：`HomepageSections`，依「排序」由小到大
+- 新品推薦：`HomepageSections` 篩選新品後，依 `Products.建立日期` 由新到舊
+- 商品分類：`Categories` 的分類名稱、排序與圖示
+- 全部商品：依 `Products.建立日期` 由新到舊
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Categories 的「圖示」欄位請填可公開讀取的圖片網址。未填圖示時，網站會顯示備用 Q 版符號。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## V20 Cart
 
-## Deploy on Vercel
+- 手機、平板與電腦皆可修改數量、規格及刪除商品。
+- 修改數量或規格後維持原本瀏覽位置。
+- 任選活動、加價購、買 A 送 B、第二件優惠可更新原本活動組合。
+- 活動組合採整組保護，避免單筆刪除造成優惠內容失效。
+- 商品總件數會依每組件數計算，商品小計與總金額會即時更新。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## V21 Orders
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 市場取貨必填取貨市場、收件人姓名與收件人電話。
+- 超商取貨與郵局貨到付款會依取貨方式顯示並驗證正確欄位。
+- 訂單送出前再次依 Google Sheets 最新資料驗證商品、活動與價格。
+- 保留防重複送單、PR 訂單編號、訂單成功頁與 LINE 通知流程。
+- Apps Script 完整檔案位於 `apps-script`，安裝方式請看 `APPS-SCRIPT-安裝說明.txt`。
+
+## V22 Pricing Engine v2
+
+- 商品頁、活動頁、購物車與訂單共用同一套價格解析與重新驗價規則。
+- 支援單一售價、特價、限時特價、多件方案、價格規格、整組規格與逐件規格。
+- 任選、加價購、買 A 送 B、第二件／件數優惠依 Sheets 最新設定計算。
+- 最低價只顯示目前真正可購買的價格，不加「起」。
+- 完整情境與驗證項目請看 `CHANGELOG-V22.md`。

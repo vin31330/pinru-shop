@@ -26,3 +26,500 @@ select,
 textarea {
   font: inherit;
 }
+
+button,
+a,
+input,
+label,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.product-interaction-layer {
+  position: relative;
+  isolation: isolate;
+  pointer-events: auto;
+}
+
+@media (max-width: 1199px) {
+  button,
+  a,
+  input,
+  label,
+  select {
+    touch-action: manipulation;
+  }
+}
+
+.header-nav-link {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.9rem 0.35rem;
+  color: #111827;
+  transition: background-color 150ms ease;
+}
+
+.header-nav-link:hover {
+  background: #f8fafc;
+}
+
+.section-heading-icon {
+  display: inline-grid;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  place-items: center;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.section-heading-icon--新品推薦 {
+  height: 2.35rem;
+  min-width: 2.35rem;
+  border-radius: 9999px;
+  background: #16a34a;
+  padding: 0 0.3rem;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.section-heading-icon--商品分類 {
+  border-radius: 0.55rem;
+  color: #1687e8;
+  font-size: 2.25rem;
+  font-weight: 900;
+}
+
+.hero-banner {
+  min-height: 300px;
+  background:
+    radial-gradient(circle at 77% 23%, rgba(255,255,255,.9), transparent 22%),
+    linear-gradient(105deg, #f5eadf 0%, #f0dfcd 55%, #ead6bd 100%);
+}
+
+.hero-banner::after {
+  position: absolute;
+  right: 8%;
+  bottom: 0;
+  width: 36%;
+  height: 16px;
+  border-radius: 9999px 9999px 0 0;
+  background: rgba(120, 74, 38, 0.25);
+  content: "";
+  filter: blur(8px);
+}
+
+.hero-cookware {
+  position: absolute;
+  right: 4%;
+  bottom: 8%;
+  display: flex;
+  align-items: end;
+  gap: 0.25rem;
+  font-size: clamp(5rem, 10vw, 9rem);
+  filter: drop-shadow(0 15px 10px rgba(55, 38, 25, 0.18));
+}
+
+.hero-pot { transform: translateY(5px); }
+.hero-pan { transform: rotate(-8deg); }
+.hero-knife { font-size: 0.62em; transform: rotate(18deg) translateY(-18px); }
+.hero-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 15;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 9999px;
+  background: rgba(75, 85, 99, 0.52);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+.hero-arrow-left { left: 12px; }
+.hero-arrow-right { right: 12px; }
+.hero-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  display: flex;
+  gap: 6px;
+  transform: translateX(-50%);
+}
+.hero-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #c5c5c5;
+}
+.hero-dots span:first-child { background: #737373; }
+
+.product-card {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
+}
+.product-card--large img { object-fit: contain; padding: 0.35rem; }
+
+.category-tile {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 1rem;
+  background: white;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-weight: 900;
+  color: #1f2937;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.04);
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.category-tile:hover {
+  transform: translateY(-1px);
+  border-color: #10b981;
+}
+.category-tile-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  font-size: 1.55rem;
+}
+
+@media (max-width: 1199px) {
+  .header-nav-link {
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.6rem 0.1rem;
+    font-size: 0.78rem;
+  }
+  .hero-banner { min-height: 270px; }
+  .hero-cookware {
+    right: -1rem;
+    bottom: 0.75rem;
+    opacity: 0.43;
+    font-size: 6.5rem;
+  }
+  .hero-banner h1 { max-width: 78%; }
+  .hero-arrow { display: none; }
+  .category-tile {
+    min-height: 116px;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.65rem;
+    font-size: 1.05rem;
+  }
+  .category-tile-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 2.25rem;
+  }
+  .home-section {
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
+  }
+  .product-card--large img,
+  .product-card img {
+    padding: 0.5rem;
+    object-fit: contain;
+  }
+  .shortcut-card {
+    min-height: 124px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.9rem 0.5rem;
+    text-align: center;
+  }
+  .shortcut-card-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 2.5rem;
+  }
+  .shortcut-card strong {
+    font-size: 1.15rem;
+  }
+  .shortcut-card small {
+    font-size: 0.78rem;
+  }
+  .shortcut-card-arrow {
+    display: none;
+  }
+}
+
+.home-section {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+/* 首頁四個明顯的快速入口 */
+.shortcut-card {
+  display: flex;
+  min-height: 104px;
+  align-items: center;
+  gap: 0.9rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  color: white;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.shortcut-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.17);
+  filter: saturate(1.05);
+}
+
+.shortcut-card--activity { background: linear-gradient(135deg, #f43f5e, #fb7185); }
+.shortcut-card--hot { background: linear-gradient(135deg, #f97316, #f59e0b); }
+.shortcut-card--new { background: linear-gradient(135deg, #16a34a, #65b83d); }
+.shortcut-card--category { background: linear-gradient(135deg, #1687e8, #2563eb); }
+
+.shortcut-card-icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  flex: none;
+  place-items: center;
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.shortcut-card strong {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.shortcut-card small {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  opacity: 0.92;
+}
+
+.shortcut-card-arrow {
+  flex: none;
+  font-size: 2.2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.shortcut-new-badge {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 44% 56% 52% 48% / 50% 42% 58% 50%;
+  background: white;
+  color: #15803d;
+  font-size: 1rem;
+  font-weight: 950;
+  transform: rotate(-5deg);
+}
+
+.shortcut-grid-icon,
+.section-four-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+}
+
+.shortcut-grid-icon i {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: white;
+}
+
+.section-four-grid {
+  gap: 4px;
+}
+
+.section-four-grid i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+/* 手機首頁：活動最多兩個；熱銷與新品最多六個，其餘由「查看更多」進入完整列表。 */
+@media (max-width: 639px) {
+  .home-activity-grid > :nth-child(n + 3),
+  .home-product-grid > :nth-child(n + 7) {
+    display: none;
+  }
+
+  .activity-card-v18 > div:first-child {
+    aspect-ratio: 1 / 1;
+  }
+
+  .activity-card-v18 > div:last-child {
+    padding: 0.75rem;
+  }
+
+  .activity-card-v18 h3 {
+    margin-top: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .activity-card-v18 p,
+  .activity-card-v18 > div:last-child > div:first-child {
+    display: none;
+  }
+
+  .activity-card-v18 div:last-child > div:last-child {
+    margin-top: 0.65rem;
+    display: block;
+  }
+
+  .activity-card-v18 div:last-child > div:last-child > div {
+    font-size: 1.15rem;
+    line-height: 1.4;
+  }
+
+  .activity-card-v18 div:last-child > div:last-child > span {
+    margin-top: 0.5rem;
+    display: flex;
+    min-height: 2.5rem;
+    width: 100%;
+    justify-content: center;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* 區塊標題 */
+.section-heading-icon--商品分類 {
+  color: #1687e8;
+}
+
+/* 分類卡片：名稱與圖示皆由 Categories 工作表連動 */
+.category-tile {
+  min-height: 86px;
+  justify-content: flex-start;
+  padding: 0.8rem 1.1rem;
+}
+
+.category-tile-icon {
+  width: 58px;
+  height: 58px;
+  font-size: 2.5rem;
+}
+
+.category-tile-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.category-fallback {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
+}
+
+.gallery-close-button {
+  top: max(1rem, env(safe-area-inset-top));
+}
+
+.cart-editor-actions {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* 熱銷商品圖片加大，方便年長客人辨識 */
+.product-card--large .product-card-image,
+.product-card--large img {
+  object-fit: contain;
+}
+
+@media (max-width: 767px) {
+  .shortcut-card {
+    min-height: 92px;
+    gap: 0.55rem;
+    padding: 0.75rem;
+  }
+
+  .shortcut-card-icon {
+    width: 46px;
+    height: 46px;
+    font-size: 2.15rem;
+  }
+
+  .shortcut-card strong {
+    font-size: 1rem;
+  }
+
+  .shortcut-card small {
+    display: none;
+  }
+
+  .shortcut-card-arrow {
+    font-size: 1.7rem;
+  }
+
+  .shortcut-new-badge {
+    width: 44px;
+    height: 44px;
+    font-size: 0.75rem;
+  }
+
+  .shortcut-grid-icon {
+    gap: 4px;
+  }
+
+  .shortcut-grid-icon i {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+  }
+
+  .category-tile {
+    min-height: 105px;
+    justify-content: center;
+  }
+
+  .category-tile-icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .category-tile-name {
+    text-align: center;
+    font-size: 0.9rem;
+  }
+}
+
+/* 從商品頁進入購物車時，短暫標示剛才查看或加入的商品 */
+.cart-focus-highlight {
+  outline: 4px solid rgb(16 185 129 / 0.45);
+  outline-offset: 5px;
+  box-shadow: 0 0 0 10px rgb(16 185 129 / 0.10);
+  transition: outline-color 300ms ease, box-shadow 300ms ease;
+}
