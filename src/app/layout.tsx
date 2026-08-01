@@ -4,10 +4,9 @@ import "./globals.css";
 const siteName = "世界好用 小新和品儒";
 const siteDescription =
   "世界好用 小新和品儒｜鍋具、五金、生活百貨，市場精選商品，提供多元商品與優惠活動，線上快速下單。";
-const siteUrl = "https://pinru-shop.netlify.app";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL("https://pinru-shop.netlify.app"),
 
   title: {
     default: siteName,
@@ -17,40 +16,19 @@ export const metadata: Metadata = {
   description: siteDescription,
   applicationName: siteName,
 
-  alternates: {
-    canonical: "/",
-  },
-
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
-    ],
-    apple: [
-      {
-        url: "/apple-touch-icon.png",
-        type: "image/png",
-        sizes: "180x180",
-      },
-    ],
-  },
-
-  manifest: "/site.webmanifest",
-
   openGraph: {
     type: "website",
     locale: "zh_TW",
-    url: siteUrl,
+    url: "https://pinru-shop.netlify.app",
     siteName,
     title: siteName,
     description: siteDescription,
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image-orange-v2.png",
         width: 1200,
         height: 630,
-        alt: `${siteName}｜鍋具、五金、生活百貨`,
+        alt: "世界好用 小新和品儒",
       },
     ],
   },
@@ -59,12 +37,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteName,
     description: siteDescription,
-    images: ["/og-image.png"],
-  },
-
-  robots: {
-    index: true,
-    follow: true,
+    images: ["/og-image-orange-v2.png"],
   },
 };
 
