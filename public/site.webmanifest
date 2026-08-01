@@ -1,0 +1,22 @@
+{
+  "name": "世界好用 小新和品儒",
+  "short_name": "世界好用",
+  "description": "鍋具、五金、生活百貨與市場精選商品，線上快速下單。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#166534",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
