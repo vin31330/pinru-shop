@@ -3,6 +3,7 @@ import CategorySection from "@/components/CategorySection";
 import FloatingHomeButton from "@/components/FloatingHomeButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import MobileProductFlowScrollTop from "@/components/MobileProductFlowScrollTop";
 import ProductCard from "@/components/ProductCard";
 import SectionHeading from "@/components/SectionHeading";
 import { getPublishedCategories } from "@/lib/categories";
@@ -115,6 +116,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <main className="min-h-screen bg-white">
+      {isProductCategoryFlow && (
+        <MobileProductFlowScrollTop
+          navigationKey={`${category}|${view}|${currentPage}`}
+        />
+      )}
       <Header
         showHomeButton={!mobileShowsBackButton}
         mobileBackButton={mobileShowsBackButton}
