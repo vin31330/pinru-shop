@@ -85,7 +85,10 @@ export default async function Home() {
           products={newProducts}
           limit={settings.homeNewCount}
         />
-        <CategorySection categories={categories.slice(0, settings.homeCategoryCount)} />
+        <CategorySection
+          categories={categories.slice(0, settings.homeCategoryCount)}
+          viewAllHref="/products?view=all"
+        />
       </div>
       <Footer />
     </main>
