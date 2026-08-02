@@ -56,11 +56,13 @@ export default function CategorySection({
   showHeading = true,
   className = "",
   sectionId = "商品分類",
+  viewAllHref = "/products",
 }: {
   categories: ProductCategory[];
   showHeading?: boolean;
   className?: string;
   sectionId?: string;
+  viewAllHref?: string;
 }) {
   if (categories.length === 0) return null;
 
@@ -69,7 +71,7 @@ export default function CategorySection({
       id={sectionId}
       className={`home-section scroll-mt-32 border-t border-slate-200 ${className}`.trim()}
     >
-      {showHeading && <SectionHeading title="商品分類" href="/products" />}
+      {showHeading && <SectionHeading title="商品分類" href={viewAllHref} />}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {categories.map((category) => (
           <Link

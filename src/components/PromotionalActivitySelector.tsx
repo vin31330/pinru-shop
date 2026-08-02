@@ -57,6 +57,7 @@ function ProductChoiceCard({
   selected,
   label,
   priceLabel,
+  priceMode = "activity",
   onSelect,
   disabled,
 }: {
@@ -64,10 +65,17 @@ function ProductChoiceCard({
   selected: boolean;
   label: string;
   priceLabel: string;
+  priceMode?: "product" | "activity";
   onSelect: () => void;
   disabled?: boolean;
 }) {
-  const regular = defaultPurchase(relation.product).originalPrice;
+  const purchase = defaultPurchase(relation.product);
+  const regular = purchase.originalPrice;
+  const productPrice = relation.product.salePrice ?? relation.product.price;
+  const productOriginalPrice = relation.product.basePrice ?? relation.product.price;
+  const productHasSalePrice =
+    relation.product.salePrice !== undefined && productOriginalPrice > productPrice;
+
   return (
     <button
       type="button"
@@ -97,7 +105,22 @@ function ProductChoiceCard({
           <h3 className="mt-2 text-lg font-black leading-6 text-slate-900">
             {relation.product.name}
           </h3>
-          {priceLabel === "免費" ? (
+          {priceMode === "product" ? (
+            productHasSalePrice ? (
+              <div className="mt-2">
+                <div className="text-sm text-slate-400 line-through">
+                  原價 NT${currency.format(productOriginalPrice)}
+                </div>
+                <div className="text-xl font-black text-rose-600">
+                  NT${currency.format(productPrice)}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 text-xl font-black text-rose-600">
+                NT${currency.format(productPrice)}
+              </div>
+            )
+          ) : priceLabel === "免費" ? (
             <div className="mt-2">
               <span className="text-sm text-slate-400 line-through">原價 NT${currency.format(regular)}</span>
               <div className="text-xl font-black text-rose-600">活動贈品 NT$0</div>
@@ -361,6 +384,7 @@ export default function PromotionalActivitySelector({
               selected={triggerId === relation.id}
               label="購買這項商品"
               priceLabel={`NT$${currency.format(defaultPurchase(relation.product).price)}`}
+              priceMode="product"
               disabled={!interactive}
               onSelect={() => {
                 setTriggerId(relation.id);

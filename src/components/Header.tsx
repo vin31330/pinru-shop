@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { HeaderBackButton } from "@/components/BackButton";
 import CartCount from "@/components/CartCount";
-import { HeaderHomeButton } from "@/components/FloatingHomeButton";
+import { HeaderHomeButton, HomeButtonLink } from "@/components/FloatingHomeButton";
 
 type HeaderProps = {
   showHomeButton?: boolean;
   showBackButton?: boolean;
+  mobileBackButton?: boolean;
   backFallbackHref?: string;
+  backLabel?: string;
 };
 
 function SearchIcon() {
@@ -33,7 +35,9 @@ function SearchIcon() {
 export default function Header({
   showHomeButton = false,
   showBackButton = false,
+  mobileBackButton = false,
   backFallbackHref = "/",
+  backLabel,
 }: HeaderProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
@@ -134,8 +138,20 @@ export default function Header({
         </div>
       </form>
 
-      {showBackButton ? (
-        <HeaderBackButton fallbackHref={backFallbackHref} />
+      {mobileBackButton ? (
+        <>
+          <div className="md:hidden">
+            <HeaderBackButton
+              fallbackHref={backFallbackHref}
+              label={backLabel}
+            />
+          </div>
+          <div className="hidden px-3 pb-2 md:flex min-[1200px]:hidden">
+            <HomeButtonLink />
+          </div>
+        </>
+      ) : showBackButton ? (
+        <HeaderBackButton fallbackHref={backFallbackHref} label={backLabel} />
       ) : (
         showHomeButton && <HeaderHomeButton />
       )}

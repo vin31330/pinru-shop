@@ -17,6 +17,7 @@ type ProductsPageProps = {
     category?: string;
     section?: string;
     page?: string;
+    view?: string;
   }>;
 };
 
@@ -25,23 +26,26 @@ function pageHref({
   category,
   section,
   page,
+  view,
 }: {
   q: string;
   category: string;
   section: string;
   page: number;
+  view?: string;
 }): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (category) params.set("category", category);
   if (section) params.set("section", section);
+  if (view) params.set("view", view);
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
   return query ? `/products?${query}` : "/products";
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const { q = "", category = "", section = "", page = "1" } = await searchParams;
+  const { q = "", category = "", section = "", page = "1", view = "" } = await searchParams;
   const keyword = q.trim().toLowerCase();
   const [allProducts, sheetCategories, settings] = await Promise.all([
     getPublishedProducts(),
@@ -104,16 +108,39 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             ? (categories.find((item) => item.id === category)?.name ?? category)
             : "全部商品";
 
+  const isProductCategoryFlow = !q && !section;
+  const mobileShowsBackButton = isProductCategoryFlow && (Boolean(category) || view === "all");
+  const mobileCategoriesFirst = isProductCategoryFlow && !category && view !== "all";
+  const mobileCategoriesLast = isProductCategoryFlow && !mobileCategoriesFirst;
+
   return (
     <main className="min-h-screen bg-white">
-      <Header showHomeButton />
+      <Header
+        showHomeButton={!mobileShowsBackButton}
+        mobileBackButton={mobileShowsBackButton}
+        backFallbackHref="/products"
+        backLabel="回到上一頁"
+      />
       <FloatingHomeButton />
       <div className="mx-auto max-w-7xl px-4 pb-7 pt-3 md:py-7">
-        {!q && !section && (
-          <CategorySection
-            categories={categories}
-            sectionId="商品分類"
-          />
+        {isProductCategoryFlow && (
+          <>
+            <div className="hidden md:block">
+              <CategorySection
+                categories={categories}
+                sectionId="商品分類-桌面"
+              />
+            </div>
+            {mobileCategoriesFirst && (
+              <div className="md:hidden">
+                <CategorySection
+                  categories={categories}
+                  sectionId="商品分類"
+                  viewAllHref="/products?view=all"
+                />
+              </div>
+            )}
+          </>
         )}
         <section className="pt-2">
           {pageTitle === "熱銷商品" || pageTitle === "新品推薦" || pageTitle === "限時優惠" ? (
@@ -141,7 +168,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <nav className="mt-8 flex items-center justify-center gap-3" aria-label="商品分頁">
               {currentPage > 1 ? (
                 <Link
-                  href={pageHref({ q, category, section, page: currentPage - 1 })}
+                  href={pageHref({ q, category, section, page: currentPage - 1, view })}
                   className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-black text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
                 >
                   上一頁
@@ -156,7 +183,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </span>
               {currentPage < totalPages ? (
                 <Link
-                  href={pageHref({ q, category, section, page: currentPage + 1 })}
+                  href={pageHref({ q, category, section, page: currentPage + 1, view })}
                   className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-black text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
                 >
                   下一頁
@@ -169,6 +196,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             </nav>
           )}
         </section>
+
+        {mobileCategoriesLast && (
+          <div className="md:hidden">
+            <CategorySection
+              categories={categories}
+              sectionId="商品分類-下方"
+              viewAllHref="/products?view=all"
+            />
+          </div>
+        )}
       </div>
       <Footer />
     </main>

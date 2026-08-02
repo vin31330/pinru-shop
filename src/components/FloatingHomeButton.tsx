@@ -19,7 +19,7 @@ const homeButtonStyle: CSSProperties = {
   boxShadow: "0 5px 18px rgba(15, 23, 42, 0.16)",
 };
 
-function HomeButtonLink({ style }: { style?: CSSProperties }) {
+export function HomeButtonLink({ style }: { style?: CSSProperties }) {
   return (
     <Link
       href="/"
