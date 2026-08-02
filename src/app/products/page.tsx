@@ -112,8 +112,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         {!q && !section && (
           <CategorySection
             categories={categories}
-            className="hidden md:block"
-            sectionId="商品分類-電腦版"
+            sectionId="商品分類"
           />
         )}
         <section className="pt-2">
@@ -170,13 +169,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             </nav>
           )}
         </section>
-        {!q && !section && (
-          <CategorySection
-            categories={categories}
-            className="md:hidden"
-            sectionId="商品分類-手機版"
-          />
-        )}
       </div>
       <Footer />
     </main>

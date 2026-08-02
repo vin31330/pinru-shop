@@ -67,7 +67,7 @@ function ProductChoiceCard({
   onSelect: () => void;
   disabled?: boolean;
 }) {
-  const regular = defaultPurchase(relation.product).price;
+  const regular = defaultPurchase(relation.product).originalPrice;
   return (
     <button
       type="button"
