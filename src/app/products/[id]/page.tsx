@@ -65,19 +65,6 @@ export default async function ProductPage({
           />
 
           <section>
-            {visibleTags.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {visibleTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
             {product.limitedOffer && product.offerActive && (
               <div className="mb-3 w-fit rounded-full bg-rose-100 px-3 py-1.5 text-sm font-black text-rose-700">
                 限時優惠
@@ -143,6 +130,19 @@ export default async function ProductPage({
               {product.description ||
                 "商品詳細內容請洽 LINE 官方帳號。"}
             </p>
+
+            {visibleTags.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {visibleTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <AddToCartPanel
               purchaseId="product-purchase"

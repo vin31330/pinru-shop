@@ -95,7 +95,7 @@ export default function Header({
           href={lineUrl}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto flex shrink-0 items-center gap-2 rounded-xl px-2 py-1.5 font-black text-slate-900 transition hover:bg-slate-50"
+          className="ml-auto flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 font-black text-slate-900 transition hover:bg-slate-50 md:flex-row md:gap-2 md:px-2 md:py-1.5"
           aria-label="開啟 LINE 官方帳號"
         >
           <Image
@@ -106,14 +106,16 @@ export default function Header({
             className="h-10 w-10 object-contain"
             priority
           />
+          <span className="text-[11px] font-black leading-none md:hidden">LINE客服</span>
           <span className="hidden lg:inline">LINE</span>
         </a>
 
         <Link
           href="/cart"
-          className="relative flex shrink-0 items-center gap-2 rounded-xl px-2 py-1.5 font-black text-slate-900 transition hover:bg-slate-50"
+          className="relative flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 font-black text-slate-900 transition hover:bg-slate-50 md:flex-row md:gap-2 md:px-2 md:py-1.5"
         >
           <span className="text-3xl" aria-hidden="true">🛒</span>
+          <span className="text-[11px] font-black leading-none md:hidden">購物車</span>
           <span className="hidden lg:inline">購物車</span>
           <CartCount />
         </Link>

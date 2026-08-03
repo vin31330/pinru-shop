@@ -73,6 +73,26 @@ export function getPlanPurchasablePrices(plan: PricingPlan): number[] {
   return prices.map(positive).filter((price): price is number => price !== undefined);
 }
 
+export function getOriginalGroupPrice(
+  product: Product,
+  plan: PricingPlan,
+  priceOption?: PricingPlanOption,
+): number {
+  const price = positive(priceOption?.price ?? plan.price) ?? 0;
+  const configuredOriginalPrice = positive(priceOption?.originalPrice);
+
+  if (configuredOriginalPrice) {
+    return Math.max(price, configuredOriginalPrice);
+  }
+
+  const basePerPiece = positive(product.basePrice);
+  const baseGroupPrice = basePerPiece
+    ? basePerPiece * Math.max(1, plan.quantity)
+    : price;
+
+  return Math.max(price, baseGroupPrice);
+}
+
 export function getPurchasablePriceCandidates(
   productPrice: number,
   salePrice: number,
@@ -171,14 +191,11 @@ export function resolveProductPrice(
   const optionError = validateOrdinaryOptions(product, plan, selectedOptions);
   if (optionError) return { ok: false, error: optionError };
 
-  const basePerPiece = positive(product.basePrice);
-  const baseGroupPrice = basePerPiece ? basePerPiece * Math.max(1, plan.quantity) : price;
-
   return {
     ok: true,
     plan,
     price,
-    originalPrice: Math.max(price, baseGroupPrice),
+    originalPrice: getOriginalGroupPrice(product, plan, priceOption),
     priceOption,
   };
 }

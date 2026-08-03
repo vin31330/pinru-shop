@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { addProductToCart, makeCartId } from "@/lib/cart";
 import {
   getOrdinaryProductOptions,
+  getOriginalGroupPrice,
   getProductPricingPlans,
   resolveProductPrice,
 } from "@/lib/pricingEngine";
@@ -124,6 +125,11 @@ export default function AddToCartPanel({
       (item) => item.id === selectedPriceOptionId,
     ) ?? selectedPlan.optionPrices[0];
   const selectedGroupPrice = selectedPriceOption?.price ?? selectedPlan.price;
+  const selectedGroupOriginalPrice = getOriginalGroupPrice(
+    product,
+    selectedPlan,
+    selectedPriceOption,
+  );
 
   function updateSelection(itemIndex: number, groupName: string, value: string) {
     setAdded(false);
@@ -338,8 +344,21 @@ export default function AddToCartPanel({
                     {item.groupName}：{item.optionValue}
                   </span>
                 </span>
-                <span className="text-lg font-black text-rose-600">
-                  NT${currency.format(item.price)}
+                <span className="shrink-0 text-right">
+                  {item.originalPrice && item.originalPrice > item.price ? (
+                    <>
+                      <span className="block text-sm font-bold text-slate-400 line-through">
+                        原價 NT${currency.format(item.originalPrice)}
+                      </span>
+                      <span className="block text-lg font-black text-rose-600">
+                        特價 NT${currency.format(item.price)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-lg font-black text-rose-600">
+                      NT${currency.format(item.price)}
+                    </span>
+                  )}
                 </span>
               </label>
               );
@@ -455,7 +474,13 @@ export default function AddToCartPanel({
             {selectedPriceOption.groupName}：{selectedPriceOption.optionValue}
           </div>
         )}
+        {selectedGroupOriginalPrice > selectedGroupPrice && (
+          <div className="mt-2 text-sm font-bold text-slate-400 line-through">
+            原價 NT${currency.format(selectedGroupOriginalPrice * groupQuantity)}
+          </div>
+        )}
         <div className="mt-1 text-2xl font-black text-rose-600">
+          {selectedGroupOriginalPrice > selectedGroupPrice ? "特價 " : ""}
           NT${currency.format(selectedGroupPrice * groupQuantity)}
         </div>
       </div>

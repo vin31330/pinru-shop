@@ -245,6 +245,7 @@ export async function getPublishedProducts(): Promise<Product[]> {
     const groupName = valueFrom(row, ["規格群組"]);
     const optionValue = valueFrom(row, ["規格值"]);
     const price = parseNumber(valueFrom(row, ["方案價格"]));
+    const originalPrice = parseNumber(valueFrom(row, ["方案原價"]));
 
     if (
       !planId ||
@@ -261,6 +262,7 @@ export async function getPublishedProducts(): Promise<Product[]> {
       groupName,
       optionValue,
       price,
+      originalPrice: originalPrice > price ? originalPrice : undefined,
       order: Number(valueFrom(row, ["顯示順序"])) || 999,
     };
 

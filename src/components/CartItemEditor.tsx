@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { makeCartId, replaceCartItem } from "@/lib/cart";
 import {
   getOrdinaryProductOptions,
+  getOriginalGroupPrice,
   getProductPricingPlans,
   resolveProductPrice,
 } from "@/lib/pricingEngine";
@@ -169,7 +170,18 @@ export default function CartItemEditor({
               {selectedPlan.optionPrices.map((entry) => (
                 <label key={entry.id} className={`flex cursor-pointer justify-between rounded-2xl border-2 p-4 ${entry.id === priceOptionId ? "border-emerald-600 bg-emerald-50" : "border-slate-200"}`}>
                   <span><input type="radio" checked={entry.id === priceOptionId} onChange={() => setPriceOptionId(entry.id)} /> {entry.groupName}：{entry.optionValue}</span>
-                  <b>NT${currency.format(entry.price)}</b>
+                  <span className="shrink-0 text-right">
+                    {getOriginalGroupPrice(product, selectedPlan, entry) > entry.price ? (
+                      <>
+                        <span className="block text-xs font-bold text-slate-400 line-through">
+                          原價 NT${currency.format(getOriginalGroupPrice(product, selectedPlan, entry))}
+                        </span>
+                        <b className="block text-rose-600">特價 NT${currency.format(entry.price)}</b>
+                      </>
+                    ) : (
+                      <b>NT${currency.format(entry.price)}</b>
+                    )}
+                  </span>
                 </label>
               ))}
             </div>

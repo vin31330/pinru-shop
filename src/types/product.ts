@@ -5,6 +5,7 @@ export type PricingPlanOption = {
   groupName: string;
   optionValue: string;
   price: number;
+  originalPrice?: number;
   order: number;
 };
 
