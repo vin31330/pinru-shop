@@ -268,7 +268,7 @@ export function reconcileCart(items: CartItem[], products: Product[], activities
       );
 
       if (promotionRole === "優惠原價商品" || promotionRole === "優惠折扣商品") {
-        const required = Math.max(2, Number(item.selectedOptions["活動每組件數"]) || activity.requiredCount || activity.triggerCount || 2);
+        const required = Math.max(1, Number(item.selectedOptions["活動每組件數"]) || activity.requiredCount || activity.triggerCount || 1);
         const sameGroup = samePromotionGroup.filter((candidate) =>
           (candidate.selectedOptions["活動角色"] === "優惠原價商品" || candidate.selectedOptions["活動角色"] === "優惠折扣商品")
         );

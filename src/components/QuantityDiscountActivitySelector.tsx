@@ -33,7 +33,7 @@ export default function QuantityDiscountActivitySelector({
   editSelectionId?: string;
 }) {
   const router = useRouter();
-  const required = Math.max(2, activity.requiredCount || activity.triggerCount || activity.discountItemIndex || 2);
+  const required = Math.max(1, activity.requiredCount || activity.triggerCount || activity.discountItemIndex || 1);
   const discountPosition = Math.min(
     required - 1,
     Math.max(0, (activity.discountItemIndex || required) - 1),
@@ -152,7 +152,7 @@ export default function QuantityDiscountActivitySelector({
       router.push(`/cart?focus=${encodeURIComponent(`promotion:${selectionId}`)}`);
       return;
     }
-    setMessage("第二件優惠活動商品已加入購物車 ✓");
+    setMessage(required === 1 ? "活動折扣商品已加入購物車 ✓" : "第二件優惠活動商品已加入購物車 ✓");
     setQuantities({});
   }
 
@@ -177,7 +177,7 @@ export default function QuantityDiscountActivitySelector({
       )}
       <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-xl font-black">選擇活動商品</h2>
-        <p className="mt-2 text-slate-500">每 {required} 件為一組，第 {discountPosition + 1} 件享有優惠。不同商品可混搭{activity.repeatable ? "，可重複套用" : "，每張訂單限用一組"}。</p>
+        <p className="mt-2 text-slate-500">{required === 1 ? `每件活動商品都會套用優惠，不同商品可混搭${activity.repeatable ? "，可重複套用" : "。"}` : `每 ${required} 件為一組，第 ${discountPosition + 1} 件享有優惠。不同商品可混搭${activity.repeatable ? "，可重複套用" : "，每張訂單限用一組"}。`}</p>
         <div className="mt-3 inline-flex rounded-full bg-rose-50 px-4 py-2 font-black text-rose-700">{getPromotionDescription(activity)}</div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {activity.products.map((relation) => {

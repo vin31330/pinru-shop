@@ -18,7 +18,7 @@ export function normalizeActivityType(value: string): string {
     raw.includes("第二件折扣") ||
     raw.includes("第二件優惠")
   ) return "SECOND_DISCOUNT";
-  if (key.includes("QUANTITYDISCOUNT") || raw.includes("件數優惠") || raw.includes("多件優惠")) return "QUANTITY_DISCOUNT";
+  if (key.includes("QUANTITYDISCOUNT") || raw.includes("件數優惠") || raw.includes("多件優惠") || raw.includes("指定商品折扣") || raw.includes("商品折扣")) return "QUANTITY_DISCOUNT";
   if (key.includes("MIXMATCH") || raw.includes("任選優惠") || raw.includes("任選")) return "MIX_MATCH";
   if (key.includes("AMOUNTDISCOUNT") || raw.includes("滿額折扣") || raw.includes("滿額優惠")) return "BUY_AMOUNT_DISCOUNT";
   return raw || "MIX_MATCH";
@@ -97,6 +97,17 @@ export function getPromotionDescription(activity: Activity): string {
   const method = getActivityDiscountMethod(activity);
   const value = getActivityDiscountValue(activity);
   const itemIndex = activity.discountItemIndex || activity.requiredCount || activity.triggerCount || 2;
+  const isPerItemPromotion = itemIndex <= 1 || (activity.requiredCount || activity.triggerCount || 0) <= 1;
+
+  if (isPerItemPromotion) {
+    if (method === "FREE") return "活動商品免費";
+    if (method === "FIXED_PRICE") return `活動商品固定 NT$${Math.round(value).toLocaleString("zh-TW")}`;
+    if (method === "AMOUNT_OFF") return `活動商品現折 NT$${Math.round(value).toLocaleString("zh-TW")}`;
+    if (method === "PERCENT_PRICE") return `活動商品支付 ${value}%（約 ${value} 折）`;
+    const payablePercent = Math.max(0, 100 - Math.min(value, 100));
+    return `活動商品折扣 ${value}%（支付 ${payablePercent}%）`;
+  }
+
   if (method === "FREE") return `第 ${itemIndex} 件免費`;
   if (method === "FIXED_PRICE") return `第 ${itemIndex} 件固定 NT$${Math.round(value).toLocaleString("zh-TW")}`;
   if (method === "AMOUNT_OFF") return `第 ${itemIndex} 件現折 NT$${Math.round(value).toLocaleString("zh-TW")}`;

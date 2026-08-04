@@ -38,11 +38,11 @@ export default function Banner({ banners }: Props) {
   }
 
   const buttonClass =
-    "mt-5 inline-flex min-h-12 w-fit items-center gap-2 rounded-xl border border-white/70 bg-emerald-600 px-6 py-3 text-base font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 sm:mt-6";
+    "mt-4 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-white/70 bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200 sm:mt-5 sm:min-h-12 sm:px-6 sm:py-3 sm:text-base";
 
   return (
     <section
-      className="hero-banner-v18 relative min-h-[360px] overflow-hidden rounded-2xl bg-white shadow-md sm:min-h-[390px]"
+      className="hero-banner-v18 relative min-h-[280px] overflow-hidden rounded-2xl bg-white shadow-md sm:min-h-[300px] lg:min-h-[320px]"
       aria-label="首頁活動 Banner"
     >
       {active.imageUrl ? (
@@ -69,19 +69,19 @@ export default function Banner({ banners }: Props) {
 
       <div
         data-banner-mobile-overlay
-        className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent sm:hidden"
+        className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent"
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex min-h-[360px] max-w-xl flex-col justify-end px-6 pb-10 pt-24 sm:min-h-[390px] sm:justify-center sm:p-10 lg:p-14">
-        <p className="text-base font-black tracking-[0.16em] text-emerald-200 sm:text-emerald-700">世界好用精選</p>
+      <div className="relative z-10 flex min-h-[280px] max-w-xl flex-col justify-end px-5 pb-16 pt-20 sm:min-h-[300px] sm:px-8 sm:pb-16 sm:pt-16 lg:min-h-[320px] lg:max-w-2xl lg:px-10 lg:pb-16 lg:pt-16">
+        <p className="text-sm font-black tracking-[0.14em] text-emerald-200 sm:text-base lg:text-emerald-100">世界好用精選</p>
         {active.title && (
-          <h1 className="mt-3 max-w-[90%] whitespace-pre-line text-[2.5rem] font-black leading-[1.15] text-white drop-shadow-sm sm:text-5xl sm:text-stone-900 sm:drop-shadow-none">
+          <h1 className="mt-2 max-w-[92%] whitespace-pre-line text-[2rem] font-black leading-[1.1] text-white drop-shadow-sm sm:mt-3 sm:text-[2.25rem] lg:text-[2.6rem]">
             {active.title}
           </h1>
         )}
         {active.subtitle && (
-          <p className="mt-3 max-w-[92%] whitespace-pre-line text-lg font-bold leading-7 text-white/95 sm:mt-4 sm:text-stone-700">
+          <p className="mt-2 max-w-[95%] whitespace-pre-line text-base font-bold leading-6 text-white/95 sm:mt-3 sm:text-lg sm:leading-7 lg:max-w-[85%]">
             {active.subtitle}
           </p>
         )}
@@ -95,6 +95,10 @@ export default function Banner({ banners }: Props) {
               {active.buttonText}<span aria-hidden="true">→</span>
             </Link>
           ))}
+      </div>
+
+      <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/90 px-4 py-1.5 text-xs font-black tracking-[0.08em] text-emerald-700 shadow sm:bottom-4 sm:text-sm">
+        往下滑看更多商品 ↓
       </div>
 
       {slides.length > 1 && (
@@ -115,7 +119,7 @@ export default function Banner({ banners }: Props) {
           >
             ›
           </button>
-          <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2" aria-label="Banner 頁次">
+          <div className="absolute bottom-12 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-14" aria-label="Banner 頁次">
             {slides.map((slide, index) => (
               <button
                 key={slide.id}
