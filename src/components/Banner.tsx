@@ -69,19 +69,18 @@ export default function Banner({ banners }: Props) {
 
       <div
         data-banner-mobile-overlay
-        className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent"
+        className="absolute inset-0 bg-transparent"
         aria-hidden="true"
       />
 
       <div className="relative z-10 flex min-h-[230px] max-w-xl flex-col justify-end px-5 pb-8 pt-14 sm:min-h-[255px] sm:px-8 sm:pb-10 sm:pt-12 lg:min-h-[280px] lg:max-w-2xl lg:px-10 lg:pb-11 lg:pt-12">
-        <p className="text-sm font-black tracking-[0.14em] text-emerald-200 sm:text-base lg:text-emerald-100">世界好用精選</p>
         {active.title && (
-          <h1 className="mt-2 max-w-[92%] whitespace-pre-line text-[1.75rem] font-black leading-[1.1] text-white drop-shadow-sm sm:text-[2rem] lg:text-[2.25rem]">
+          <h1 className="mt-2 max-w-[92%] whitespace-pre-line text-[1.75rem] font-black leading-[1.1] text-white drop-shadow-sm sm:text-[2rem] sm:text-stone-900 sm:drop-shadow-none lg:text-[2.25rem]">
             {active.title}
           </h1>
         )}
         {active.subtitle && (
-          <p className="mt-2 max-w-[95%] whitespace-pre-line text-base font-bold leading-6 text-white/95 sm:mt-3 sm:text-lg sm:leading-7 lg:max-w-[85%]">
+          <p className="mt-2 max-w-[95%] whitespace-pre-line text-base font-bold leading-6 text-white/95 sm:mt-3 sm:text-lg sm:leading-7 sm:text-stone-700 lg:max-w-[85%]">
             {active.subtitle}
           </p>
         )}

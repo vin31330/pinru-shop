@@ -112,14 +112,15 @@ export default function Header({
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:gap-6">
           <button
             type="button"
-            aria-label="開啟網站導覽"
+            aria-label="開啟網站導覽選單"
             aria-expanded={menuOpen}
             aria-controls="site-navigation-drawer"
-            title="網站導覽"
+            title="網站導覽選單"
             onClick={() => setMenuOpen(true)}
-            className="grid h-12 w-12 shrink-0 touch-manipulation place-items-center rounded-full bg-slate-100 text-2xl font-black transition hover:bg-slate-200 active:bg-slate-300"
+            className="flex h-12 w-12 shrink-0 touch-manipulation flex-col items-center justify-center rounded-full bg-slate-100 font-black text-slate-900 transition hover:bg-slate-200 active:bg-slate-300"
           >
-            ☰
+            <span className="text-xl leading-none" aria-hidden="true">☰</span>
+            <span className="mt-0.5 text-[10px] leading-none">選單</span>
           </button>
 
           <Link href="/" className="min-w-0 shrink-0">
@@ -238,7 +239,7 @@ export default function Header({
           >
             <div className="flex items-center justify-between border-b px-5 py-4">
               <div>
-                <div className="text-xl font-black text-emerald-700">世界好用</div>
+                <div className="text-xl font-black text-emerald-700">世界好用 小新和品儒</div>
                 <div className="mt-0.5 text-sm font-bold text-slate-500">快速前往網站各區</div>
               </div>
               <button
