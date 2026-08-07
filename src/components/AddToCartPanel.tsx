@@ -46,6 +46,26 @@ function selectionsForPlan(
   return plan.quantity === 1 ? groupQuantity : plan.quantity;
 }
 
+function getBundleColorOption(plan: PricingPlan, options: ProductOption[]): ProductOption | undefined {
+  if (!plan.selectOptionsPerItem || plan.quantity <= 1) return undefined;
+  if (!/(包色|全色|全花色|全款)/.test(plan.name)) return undefined;
+
+  const colorOption = options.find((option) => /(顏色|花色|色系|色號)/.test(option.name));
+  if (!colorOption || colorOption.values.length !== plan.quantity) return undefined;
+  return colorOption;
+}
+
+function createSelectionsForPlan(plan: PricingPlan, quantity: number, options: ProductOption[]): ItemSelections {
+  const selections = createSelections(quantity, options);
+  const colorOption = getBundleColorOption(plan, options);
+  if (!colorOption) return selections;
+
+  return selections.map((selection, index) => ({
+    ...selection,
+    [colorOption.name]: colorOption.values[index] ?? colorOption.values[0] ?? "",
+  }));
+}
+
 export default function AddToCartPanel({
   product,
   purchaseId = "product-purchase",
@@ -72,9 +92,17 @@ export default function AddToCartPanel({
     selectedPlan.optionPrices[0]?.id ?? "",
   );
   const [selections, setSelections] = useState<ItemSelections>(() =>
-    createSelections(selectionsForPlan(selectedPlan, 1), perItemOptions),
+    createSelectionsForPlan(
+      selectedPlan,
+      selectionsForPlan(selectedPlan, 1),
+      perItemOptions,
+    ),
   );
   const [groupQuantity, setGroupQuantity] = useState(1);
+  const bundleColorOption = useMemo(
+    () => getBundleColorOption(selectedPlan, perItemOptions),
+    [selectedPlan, perItemOptions],
+  );
   const [added, setAdded] = useState(false);
   const [lastCartId, setLastCartId] = useState("");
   const [actionError, setActionError] = useState("");
@@ -91,7 +119,8 @@ export default function AddToCartPanel({
   useEffect(() => {
     setGroupQuantity(1);
     setSelections(
-      createSelections(
+      createSelectionsForPlan(
+        selectedPlan,
         selectedPlan.selectOptionsPerItem ? selectedPlan.quantity : 1,
         perItemOptions,
       ),
@@ -376,11 +405,15 @@ export default function AddToCartPanel({
                 : "選擇商品規格"
               : "選擇整組商品規格"}
           </h2>
-          {!selectedPlan.selectOptionsPerItem && (
+          {bundleColorOption ? (
+            <p className="mt-1 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+              包色方案已自動帶入全部顏色，不需要再一個一個選色。
+            </p>
+          ) : !selectedPlan.selectOptionsPerItem ? (
             <p className="mt-1 text-sm text-slate-500">
               選好的規格會套用到這一組的每一件商品。
             </p>
-          )}
+          ) : null}
           <div className="mt-3 space-y-4">
             {selections.map((selection, itemIndex) => (
               <div key={itemIndex} className="rounded-2xl bg-slate-50 p-4">
@@ -390,27 +423,38 @@ export default function AddToCartPanel({
                     : "整組共用規格"}
                 </div>
                 <div className="space-y-3">
-                  {perItemOptions.map((option) => (
-                    <label key={option.name} className="block">
-                      <span className="mb-1.5 block text-sm font-bold">
-                        {option.name}
-                      </span>
-                      <select
-                        disabled={!interactive}
-                        value={selection[option.name] ?? ""}
-                        onChange={(event) =>
-                          updateSelection(itemIndex, option.name, event.target.value)
-                        }
-                        className="h-12 w-full rounded-xl border bg-white px-3 text-base"
-                      >
-                        {option.values.map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ))}
+                  {perItemOptions.map((option) =>
+                    bundleColorOption?.name === option.name ? (
+                      <div key={option.name} className="block">
+                        <span className="mb-1.5 block text-sm font-bold">
+                          {option.name}
+                        </span>
+                        <div className="flex h-12 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-base font-black text-emerald-800">
+                          {selection[option.name] ?? ""}
+                        </div>
+                      </div>
+                    ) : (
+                      <label key={option.name} className="block">
+                        <span className="mb-1.5 block text-sm font-bold">
+                          {option.name}
+                        </span>
+                        <select
+                          disabled={!interactive}
+                          value={selection[option.name] ?? ""}
+                          onChange={(event) =>
+                            updateSelection(itemIndex, option.name, event.target.value)
+                          }
+                          className="h-12 w-full rounded-xl border bg-white px-3 text-base"
+                        >
+                          {option.values.map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ),
+                  )}
                 </div>
               </div>
             ))}

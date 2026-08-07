@@ -1,0 +1,199 @@
+世界好用 小新和品儒｜FINAL 2026-08-07
+========================================
+
+這份是依照「目前 Netlify 完整版本」直接修改的正式整合版。
+本次不是測試版，預計全部完成後只 Push / Deploy 一次。
+
+【本次 8 項內容】
+1. Banner：手機、平板、電腦一起縮小；不再另外用提示文字壓在 Banner 下方。
+2. 按摩系列 88 折：支援活動商品每一件都用支付比例 88% 計價。
+3. Favicon：改成與目前橘色分享縮圖一致的品牌色小 Logo。
+4. 全部商品分頁：可直接點 1、2、3、4、5、6、7... 跳頁，不必一直按下一頁。
+5. 分類「便當盒、保鮮盒」顯示為「便當盒、保鮮盒、手提袋、保溫袋」。
+6. 左上角三條線：改成網站導覽選單，可直接前往首頁、活動、熱銷、新品、商品分類及 8 個分類。
+7. 包色方案：符合設定時，自動帶入所有顏色，客人不用逐件選色。
+8. Google Analytics：網站已支援 NEXT_PUBLIC_GA_ID；Netlify 已填好後，本次正式 Deploy 就會生效。
+
+
+一、正式部署前，先不要 Push
+--------------------------
+建議先把你現在正式版本做一個 Commit 備份：
+Summary：
+FINAL backup before 20260807 release
+
+按 Commit to main。
+這一步只在本機留下版本紀錄，不會觸發 Netlify。
+先不要按 Push origin。
+
+
+二、覆蓋檔案
+------------
+把這份 ZIP 解壓縮後，裡面的 src、public、apps-script、scripts、package.json 等檔案，
+直接貼到你 GitHub Desktop 現在使用的 pinru-shop 根目錄，選擇「取代目的地中的檔案」。
+
+注意：
+- 不要刪掉你原本專案的 .git
+- 不要刪掉你原本專案的 .env.local
+- 這份正式 ZIP 本身不包含 .git 與 .env.local，所以直接覆蓋不會動到它們
+
+
+三、按摩系列 88 折｜先建立資料，但先保持隱藏
+------------------------------------------
+為避免正式網站在新版程式部署前先讀到新活動，建議先把活動建好，但「顯示狀態」先填 FALSE。
+新版部署完成後再改 TRUE。改 Google Sheets 不會消耗 Netlify Deploy 點數。
+
+A. Activities 新增 1 筆
+
+活動ID：massage88
+活動名稱：按摩系列商品全館 88 折
+活動副標題：按摩舒壓系列限時優惠
+活動說明：按摩系列商品限時 88 折，歡迎選購。
+活動類型：件數優惠
+需要件數：1
+觸發件數：1
+活動價格：留白
+優惠方式：支付比例
+優惠值：88
+優惠套用對象：全部活動商品
+優惠件序：1
+是否可重複套用：TRUE
+是否逐件選規格：FALSE
+活動開始日期：依你的日期填寫，也可以留白代表立即開始
+活動結束日期：依你的日期填寫，也可以留白
+首頁排序：依你要的活動排序填數字
+網站活動圖片網址：https://pinru-shop.netlify.app/massage-series-88-off-banner.png
+顯示狀態：先 FALSE
+
+B. Activity Products
+
+把所有要參加 88 折的按摩商品，各新增 1 筆：
+
+活動商品ID：每筆唯一，例如 massage88-001、massage88-002...
+活動ID：massage88
+商品ID：填該按摩商品的商品ID
+商品角色：活動商品
+顯示順序：1、2、3...
+是否允許重複選：TRUE
+每組最多選擇數：留白
+活動商品價格：留白
+顯示狀態：TRUE
+
+C. 若要活動出現在首頁「優惠活動」
+
+HomepageSections 再新增 1 筆：
+首頁項目ID：自己填唯一值，例如 home-massage88
+區塊：活動
+排序：依你要的位置填 1、2、3...
+商品ID：留白
+活動ID：massage88
+顯示狀態：先 FALSE
+開始日期 / 結束日期：可留白或依活動日期
+備註：可留白
+
+正式 Deploy 完成後：
+1. Activities 的 massage88 顯示狀態改 TRUE
+2. HomepageSections 的 home-massage88 顯示狀態改 TRUE
+活動就會立即出現，不需要再次部署。
+
+
+四、分類名稱修改
+----------------
+程式已經做舊名稱相容，所以商品不會因為改名而找不到。
+正式 Deploy 完成後，到 Categories 工作表找到：
+
+便當盒、保鮮盒
+
+只把「分類名稱」改成：
+
+便當盒、保鮮盒、手提袋、保溫袋
+
+重要：
+- 分類ID不要改
+- Products 裡既有商品不用整批改
+- 程式同時認得舊名稱與新名稱
+
+
+五、包色方案要怎麼設定
+----------------------
+新版會在以下條件全部成立時，自動幫客人帶入所有顏色：
+
+1. Pricing Plans 的「方案名稱」包含：包色 / 全色 / 全花色 / 全款
+2. 「是否逐件選規格」= TRUE
+3. 「需要件數」= 該商品顏色總數
+4. Product Options 有一個規格群組名稱包含：顏色 / 花色 / 色系 / 色號
+5. 該規格群組的顏色數量必須剛好等於方案需要件數
+
+例如商品有 4 色：紅、黃、藍、綠
+
+Pricing Plans：
+方案名稱：四色包色
+需要件數：4
+方案價格：填包色總價
+是否逐件選規格：TRUE
+顯示狀態：TRUE
+
+Product Options：
+顏色 / 紅
+顏色 / 黃
+顏色 / 藍
+顏色 / 綠
+
+客人選「四色包色」後，網站會直接顯示：
+第1件 紅
+第2件 黃
+第3件 藍
+第4件 綠
+不用再一個一個選。
+
+顏色的自動排列順序，就是 Product Options 的「顯示順序」。
+
+
+六、Favicon
+-----------
+已直接包含：
+public/favicon.ico
+public/icon-192.png
+public/icon-512.png
+public/apple-touch-icon.png
+
+使用橘色分享縮圖的品牌色，做成橘色「世」Logo，適合瀏覽器小尺寸顯示。
+分享縮圖 og-image-orange-v2.png 保持原樣。
+
+瀏覽器舊圖示可能有快取，新版網址已加版本參數。正式部署後若仍看到舊圖示，關閉該分頁再重新開啟即可。
+
+
+七、Google Analytics
+-------------------
+Netlify 已設定：
+Key：NEXT_PUBLIC_GA_ID
+Value：G-H7SYMPPBX9
+
+程式不需要再貼 Google 提供的整段 script。
+本次正式部署完成後，GA 才開始使用這個 Measurement ID。
+
+部署完成後：
+Google Analytics → 報表 → 即時
+用手機打開正式網站，瀏覽首頁與商品頁，確認即時使用者有出現。
+
+
+八、最後只部署一次
+------------------
+全部檔案覆蓋完成後，在 GitHub Desktop：
+
+Summary：
+FINAL 20260807 navigation banner massage88 favicon pagination GA
+
+按：
+Commit to main
+
+確認這一次全部修改都在同一個 Commit 後，最後才按：
+Push origin
+
+Netlify 會自動進行一次正式部署。
+
+等 Netlify 顯示 Published 後，再去 Google Sheets：
+1. 開啟 massage88 活動
+2. 開啟 HomepageSections 的 massage88
+3. 修改便當盒分類名稱
+
+這三項都是 Sheets 資料更新，不會再觸發 Netlify Deploy。

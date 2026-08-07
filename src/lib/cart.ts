@@ -277,7 +277,7 @@ export function reconcileCart(items: CartItem[], products: Product[], activities
           sameGroup.length % required !== 0 ||
           (!activity.repeatable && sameGroup.length !== required)
         ) {
-          return invalid(item, `第二件優惠商品必須每 ${required} 件為完整一組，請重新選購。`);
+          return invalid(item, required === 1 ? "活動折扣商品資料不完整，請重新選購。" : `優惠商品必須每 ${required} 件為完整一組，請重新選購。`);
         }
         const expectedDiscountedCount = sameGroup.length / required;
         const discountedCount = sameGroup.filter(

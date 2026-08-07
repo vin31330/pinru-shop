@@ -189,7 +189,18 @@ export default function QuantityDiscountActivitySelector({
                   <ProductImage src={relation.product.mainImage} alt={relation.product.name} className="h-24 w-24 rounded-xl" />
                   <div className="min-w-0 flex-1">
                     <h3 className="font-black">{relation.product.name}</h3>
-                    <div className="mt-2 text-xl font-black text-rose-600">NT${currency.format(purchase.price)}</div>
+                    {required === 1 ? (
+                      <div className="mt-2">
+                        <div className="text-sm font-bold text-slate-400 line-through">
+                          原價 NT${currency.format(purchase.price)}
+                        </div>
+                        <div className="text-xl font-black text-rose-600">
+                          優惠價 NT${currency.format(applyPromotionDiscount(purchase.price, getActivityDiscountMethod(activity), getActivityDiscountValue(activity)))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-xl font-black text-rose-600">NT${currency.format(purchase.price)}</div>
+                    )}
                     <div className="mt-3 inline-flex overflow-hidden rounded-xl border bg-white">
                       <button type="button" disabled={!interactive} onClick={() => change(relation, -1)} className="h-10 w-10 touch-manipulation text-xl font-black disabled:text-slate-300">−</button>
                       <div className="grid h-10 min-w-12 place-items-center border-x font-black">{quantity}</div>
@@ -207,14 +218,19 @@ export default function QuantityDiscountActivitySelector({
         <h2 className="text-xl font-black">優惠試算</h2>
         <div className="mt-4 rounded-2xl bg-slate-50 p-4">
           <div className="flex justify-between"><span>已選商品</span><b>{pricedUnits.length} 件</b></div>
-          <div className="mt-2 flex justify-between"><span>完整優惠組數</span><b>{completeGroups} 組</b></div>
+          <div className="mt-2 flex justify-between"><span>{required === 1 ? "享優惠商品" : "完整優惠組數"}</span><b>{completeGroups} {required === 1 ? "件" : "組"}</b></div>
           {remainder > 0 && <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 font-bold text-amber-700">還差 {required - remainder} 件可再完成一組優惠</div>}
           {pricedUnits.length > 0 && (
             <div className="mt-4 space-y-2 border-t pt-4">
               {pricedUnits.map((unit, index) => (
                 <div key={`${unit.relation.id}-${index}`} className="flex justify-between gap-3 text-sm">
-                  <span>{unit.relation.product.name} {unit.isDiscounted ? "（優惠件）" : ""}</span>
-                  <span className={unit.isDiscounted ? "font-black text-rose-600" : "font-bold"}>NT${currency.format(unit.finalPrice)}</span>
+                  <span>{unit.relation.product.name} {unit.isDiscounted ? "（優惠價）" : ""}</span>
+                  <span className="text-right">
+                    {unit.isDiscounted && unit.finalPrice < unit.price && (
+                      <span className="mr-2 text-xs font-bold text-slate-400 line-through">NT${currency.format(unit.price)}</span>
+                    )}
+                    <span className={unit.isDiscounted ? "font-black text-rose-600" : "font-bold"}>NT${currency.format(unit.finalPrice)}</span>
+                  </span>
                 </div>
               ))}
             </div>

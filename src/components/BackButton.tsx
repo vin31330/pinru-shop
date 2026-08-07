@@ -8,10 +8,12 @@ export default function BackButton({
   fallbackHref = "/",
   label = "返回上一頁",
   className = "",
+  forceFallback = false,
 }: {
   fallbackHref?: string;
   label?: string;
   className?: string;
+  forceFallback?: boolean;
 }) {
   const router = useRouter();
 
@@ -27,6 +29,11 @@ export default function BackButton({
     }
 
     event.preventDefault();
+
+    if (forceFallback) {
+      router.replace(fallbackHref);
+      return;
+    }
 
     if (window.history.length > 1) {
       restoreReturnPositionAfterBack();
@@ -53,16 +60,22 @@ export default function BackButton({
 export function HeaderBackButton({
   fallbackHref,
   label,
+  forceFallback = false,
 }: {
   fallbackHref: string;
   label?: string;
+  forceFallback?: boolean;
 }) {
   return (
     <div
       data-header-back-button-row
       className="flex px-3 pb-2 min-[1200px]:hidden"
     >
-      <BackButton fallbackHref={fallbackHref} label={label} />
+      <BackButton
+        fallbackHref={fallbackHref}
+        label={label}
+        forceFallback={forceFallback}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
@@ -20,12 +21,12 @@ export const metadata: Metadata = {
   themeColor: "#166534",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico?v=20260807" },
+      { url: "/icon-192.png?v=20260807", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png?v=20260807", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/apple-touch-icon.png?v=20260807", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.ico?v=20260807"],
   },
 
   openGraph: {
@@ -61,7 +62,9 @@ export default function RootLayout({
   return (
     <html lang="zh-Hant" data-scroll-behavior="smooth">
       <body>
-        <GoogleAnalytics />
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
         {children}
       </body>
     </html>

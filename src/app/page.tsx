@@ -8,6 +8,7 @@ import ProductSection from "@/components/ProductSection";
 import SectionHeading from "@/components/SectionHeading";
 import { getPublishedActivities } from "@/lib/activities";
 import { getPublishedCategories } from "@/lib/categories";
+import { displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedBanners } from "@/lib/banners";
 import { getHomepageEntries } from "@/lib/homepage";
 import { getPublishedProducts } from "@/lib/products";
@@ -34,7 +35,7 @@ export default async function Home() {
     sheetCategories.length > 0
       ? sheetCategories
       : Array.from(new Set(products.map((product) => product.category).filter(Boolean))).map(
-          (name, index) => ({ id: name, name, order: index + 1 }),
+          (name, index) => ({ id: name, name: displayCategoryName(name), order: index + 1 }),
         );
 
   // 熱銷商品只由 HomepageSections 控制，依「排序」由小到大。

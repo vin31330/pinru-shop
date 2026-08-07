@@ -6,6 +6,7 @@ import {
   valueFrom,
 } from "@/lib/googleSheets";
 import { ProductCategory } from "@/types/product";
+import { displayCategoryName } from "@/lib/categoryLabels";
 
 export async function getPublishedCategories(): Promise<ProductCategory[]> {
   const rows = await readSheet(SHEET_NAMES.categories).catch(() => []);
@@ -14,7 +15,8 @@ export async function getPublishedCategories(): Promise<ProductCategory[]> {
     .map((row): ProductCategory | null => {
       if (isExplicitlyHidden(valueFrom(row, ["顯示狀態", "顯示"]))) return null;
       const id = valueFrom(row, ["分類ID"]);
-      const name = valueFrom(row, ["分類名稱"]);
+      const rawName = valueFrom(row, ["分類名稱"]);
+      const name = displayCategoryName(rawName);
       if (!name) return null;
       return {
         id: id || name,

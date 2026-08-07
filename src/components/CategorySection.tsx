@@ -6,8 +6,8 @@ import { ProductCategory } from "@/types/product";
 type FallbackKind = "bottle" | "lunchbox" | "cleaning" | "utensils" | "care" | "pan" | "basket" | "knife" | "box";
 
 function fallbackKind(name: string): FallbackKind {
+  if (/便當|保鮮|餐盒|收納盒|手提袋|保溫袋/.test(name)) return "lunchbox";
   if (/保溫|水壺|玻璃|咖啡|杯|瓶/.test(name)) return "bottle";
-  if (/便當|保鮮|餐盒|收納盒/.test(name)) return "lunchbox";
   if (/清潔|洗衣|掃除|刷/.test(name)) return "cleaning";
   if (/廚房|餐具|器具/.test(name)) return "utensils";
   if (/按摩|保健|個人|美容|保養|香水/.test(name)) return "care";
@@ -80,7 +80,20 @@ export default function CategorySection({
             className="category-tile group"
           >
             <span className="category-tile-icon" aria-hidden="true">
-              {/保溫|水壺|玻璃|咖啡|杯|瓶/.test(category.name) ? (
+              {/便當|保鮮|餐盒|收納盒|手提袋|保溫袋/.test(category.name) ? (
+                category.icon ? (
+                  <Image
+                    src={category.icon}
+                    alt=""
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <CuteFallbackIcon name={category.name} />
+                )
+              ) : /保溫|水壺|玻璃|咖啡|杯|瓶/.test(category.name) ? (
                 <CoffeeCupIcon />
               ) : /清潔用品/.test(category.name) ? (
                 <CleaningSpongeIcon />
