@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   isExplicitlyHidden,
   normalizePublicUrl,
@@ -71,7 +72,7 @@ function normalizeActivityImage(value: string): string {
   return "";
 }
 
-export async function getPublishedActivities(options?: { includeUpcoming?: boolean; includeEnded?: boolean }): Promise<Activity[]> {
+async function buildPublishedActivities(options?: { includeUpcoming?: boolean; includeEnded?: boolean }): Promise<Activity[]> {
   const [activityRows, relationRows, products] = await Promise.all([
     readSheet(SHEET_NAMES.activities).catch(() => []),
     readSheet(SHEET_NAMES.activityProducts).catch(() => []),
@@ -152,6 +153,27 @@ export async function getPublishedActivities(options?: { includeUpcoming?: boole
     })
     .filter((activity): activity is Activity => activity !== null)
     .sort((a, b) => a.homeOrder - b.homeOrder);
+}
+
+
+const getActiveActivitiesCached = unstable_cache(
+  () => buildPublishedActivities(),
+  ["pinru-active-activities-v6-1"],
+  { revalidate: 60 },
+);
+
+const getAllActivitiesCached = unstable_cache(
+  () => buildPublishedActivities({ includeUpcoming: true, includeEnded: true }),
+  ["pinru-all-activities-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getPublishedActivities(options?: { includeUpcoming?: boolean; includeEnded?: boolean }): Promise<Activity[]> {
+  if (options?.includeUpcoming || options?.includeEnded) {
+    if (options.includeUpcoming && options.includeEnded) return getAllActivitiesCached();
+    return buildPublishedActivities(options);
+  }
+  return getActiveActivitiesCached();
 }
 
 export async function getActivityById(id: string): Promise<Activity | undefined> {

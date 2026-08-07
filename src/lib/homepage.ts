@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   isExplicitlyHidden,
   readSheet,
@@ -46,7 +47,7 @@ function normalizeSection(value: string): string {
   return value.trim().replace(/\s+/g, "");
 }
 
-export async function getHomepageEntries(): Promise<HomepageEntry[]> {
+async function buildHomepageEntries(): Promise<HomepageEntry[]> {
   const rows = await readSheet(SHEET_NAMES.homepageSections).catch(() => []);
 
   return rows
@@ -85,6 +86,17 @@ export async function getHomepageEntries(): Promise<HomepageEntry[]> {
         a.order - b.order ||
         a.id.localeCompare(b.id, "zh-Hant", { numeric: true }),
     );
+}
+
+
+const getHomepageEntriesCached = unstable_cache(
+  buildHomepageEntries,
+  ["pinru-homepage-entries-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getHomepageEntries(): Promise<HomepageEntry[]> {
+  return getHomepageEntriesCached();
 }
 
 export async function getHomepageProductEntries(): Promise<HomepageEntry[]> {

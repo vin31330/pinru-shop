@@ -15,7 +15,7 @@ import { getPublishedProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { ProductCategory } from "@/types/product";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function Home() {
   const [products, activities, sheetCategories, banners, settings, homepageEntries] =

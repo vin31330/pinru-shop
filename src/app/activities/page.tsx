@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { getPublishedActivities } from "@/lib/activities";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ActivitiesPage() {
   const activities = await getPublishedActivities({ includeUpcoming: true });

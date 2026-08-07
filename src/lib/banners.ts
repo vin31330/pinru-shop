@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   isExplicitlyHidden,
   normalizePublicUrl,
@@ -49,7 +50,7 @@ function normalizeHref(value: string): string {
   return href.startsWith("/") ? href : `/${href}`;
 }
 
-export async function getPublishedBanners(): Promise<HomepageBanner[]> {
+async function buildPublishedBanners(): Promise<HomepageBanner[]> {
   const rows = await readSheet(SHEET_NAMES.homepageBanners).catch(() => []);
 
   return rows
@@ -87,3 +88,14 @@ export async function getPublishedBanners(): Promise<HomepageBanner[]> {
     .filter((banner): banner is HomepageBanner => banner !== null)
     .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id, "zh-Hant", { numeric: true }));
 }
+
+const getPublishedBannersCached = unstable_cache(
+  buildPublishedBanners,
+  ["pinru-banners-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getPublishedBanners(): Promise<HomepageBanner[]> {
+  return getPublishedBannersCached();
+}
+

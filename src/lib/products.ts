@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   isExplicitlyHidden,
   normalizePublicUrl,
@@ -92,7 +93,7 @@ function mediaType(
     : "image";
 }
 
-export async function getPublishedProducts(): Promise<Product[]> {
+async function buildPublishedProducts(): Promise<Product[]> {
   const [
     productRows,
     mediaRows,
@@ -474,6 +475,17 @@ export async function getPublishedProducts(): Promise<Product[]> {
         })
       );
     });
+}
+
+
+const getPublishedProductsCached = unstable_cache(
+  buildPublishedProducts,
+  ["pinru-published-products-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getPublishedProducts(): Promise<Product[]> {
+  return getPublishedProductsCached();
 }
 
 export async function getProductById(

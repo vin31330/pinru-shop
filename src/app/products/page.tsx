@@ -11,7 +11,7 @@ import { categoryNameAliases, displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type ProductsPageProps = {
   searchParams: Promise<{

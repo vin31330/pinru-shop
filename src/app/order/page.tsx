@@ -77,8 +77,8 @@ export default function OrderPage() {
     const current = loadCart();
     setItems(current);
     Promise.all([
-      fetch("/api/products", { cache: "no-store" }).then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Product[]>; }),
-      fetch("/api/activities", { cache: "no-store" }).then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Activity[]>; }),
+      fetch("/api/products").then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Product[]>; }),
+      fetch("/api/activities").then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Activity[]>; }),
     ])
       .then(([products, activities]) => {
         const next = reconcileCart(current, products, activities);

@@ -61,6 +61,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-Hant" data-scroll-behavior="smooth">
+      <head>
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" />
+        <link rel="preconnect" href="https://drive.google.com" />
+        <link rel="dns-prefetch" href="https://www.appsheet.com" />
+      </head>
       <body>
         <Suspense fallback={null}>
           <GoogleAnalytics />

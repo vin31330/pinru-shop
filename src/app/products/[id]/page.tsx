@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import ProductGallery from "@/components/ProductGallery";
 import { getProductById } from "@/lib/products";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 type ProductPageProps = {
   params: Promise<{ id: string }>;

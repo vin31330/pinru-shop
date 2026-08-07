@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { readSheet, SHEET_NAMES, valueFrom } from "@/lib/googleSheets";
 
 export type SiteSettings = {
@@ -29,7 +30,7 @@ function positiveInteger(value: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-export async function getSiteSettings(): Promise<SiteSettings> {
+async function buildSiteSettings(): Promise<SiteSettings> {
   const rows = await readSheet(SHEET_NAMES.settings).catch(() => []);
   const values = new Map<string, string>();
 
@@ -59,3 +60,14 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     searchPageSize: read("SearchPageSize", DEFAULT_SETTINGS.searchPageSize),
   };
 }
+
+const getSiteSettingsCached = unstable_cache(
+  buildSiteSettings,
+  ["pinru-site-settings-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+  return getSiteSettingsCached();
+}
+

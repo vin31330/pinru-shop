@@ -1,3 +1,5 @@
+const SHEET_REVALIDATE_SECONDS = 60;
+
 const SHEET_ID =
   process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID ??
   "17Bv1TJ5YMh6diWQKV-rauBLzZn5GB-jFZ20gGr8b5Js";
@@ -68,7 +70,8 @@ export async function readSheet(
     `?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 
   const response = await fetch(url, {
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: SHEET_REVALIDATE_SECONDS },
     headers: { Accept: "text/csv,text/plain,*/*" },
   });
 

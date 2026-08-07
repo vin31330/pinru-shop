@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import {
   isExplicitlyHidden,
   normalizePublicUrl,
@@ -8,7 +9,7 @@ import {
 import { ProductCategory } from "@/types/product";
 import { displayCategoryName } from "@/lib/categoryLabels";
 
-export async function getPublishedCategories(): Promise<ProductCategory[]> {
+async function buildPublishedCategories(): Promise<ProductCategory[]> {
   const rows = await readSheet(SHEET_NAMES.categories).catch(() => []);
 
   return rows
@@ -28,3 +29,14 @@ export async function getPublishedCategories(): Promise<ProductCategory[]> {
     .filter((category): category is ProductCategory => category !== null)
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, "zh-Hant"));
 }
+
+const getPublishedCategoriesCached = unstable_cache(
+  buildPublishedCategories,
+  ["pinru-categories-v6-1"],
+  { revalidate: 60 },
+);
+
+export async function getPublishedCategories(): Promise<ProductCategory[]> {
+  return getPublishedCategoriesCached();
+}
+
