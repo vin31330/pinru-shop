@@ -59,6 +59,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-H7SYMPPBX9";
   return (
     <html lang="zh-Hant" data-scroll-behavior="smooth">
       <head>
@@ -67,9 +68,11 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://www.appsheet.com" />
       </head>
       <body>
-        <Suspense fallback={null}>
-          <GoogleAnalytics />
-        </Suspense>
+        {gaId && (
+          <Suspense fallback={null}>
+            <GoogleAnalytics gaId={gaId} />
+          </Suspense>
+        )}
         {children}
       </body>
     </html>

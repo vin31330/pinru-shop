@@ -1,15 +1,18 @@
 import { notFound } from "next/navigation";
 import AddToCartPanel from "@/components/AddToCartPanel";
+import ActivityProductConfigurator from "@/components/ActivityProductConfigurator";
 import { FloatingBackButton } from "@/components/BackButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ProductGallery from "@/components/ProductGallery";
 import { getProductById } from "@/lib/products";
+import { getActivityById } from "@/lib/activities";
 
 export const revalidate = 60;
 
 type ProductPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ activity?: string; relation?: string; returnTo?: string }>;
 };
 
 const currency = new Intl.NumberFormat("zh-TW");
@@ -27,13 +30,26 @@ function formatOfferDate(value?: string): string {
 
 export default async function ProductPage({
   params,
+  searchParams,
 }: ProductPageProps) {
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const product = await getProductById(decodeURIComponent(id));
 
   if (!product) {
     notFound();
   }
+
+  const activity = query.activity
+    ? await getActivityById(decodeURIComponent(query.activity))
+    : undefined;
+  const activityRelation = activity?.products.find(
+    (item) => item.id === query.relation && item.productId === product.id,
+  );
+  const activityReturnHref = query.returnTo?.startsWith("/")
+    ? query.returnTo
+    : activity
+      ? `/activities/${encodeURIComponent(activity.id)}`
+      : "/products";
 
   const media = Array.isArray(product.media)
     ? product.media
@@ -53,8 +69,8 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Header showBackButton backFallbackHref="/products" />
-      <FloatingBackButton fallbackHref="/products" />
+      <Header showBackButton backFallbackHref={activityRelation ? activityReturnHref : "/products"} />
+      <FloatingBackButton fallbackHref={activityRelation ? activityReturnHref : "/products"} />
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -144,15 +160,30 @@ export default async function ProductPage({
               </div>
             )}
 
-            <AddToCartPanel
-              purchaseId="product-purchase"
-              product={{
-                ...product,
-                media,
-                tags,
-                options,
-              }}
-            />
+            {activity && activityRelation ? (
+              <ActivityProductConfigurator
+                activityId={activity.id}
+                activityName={activity.name}
+                relationId={activityRelation.id}
+                returnHref={activityReturnHref}
+                product={{
+                  ...product,
+                  media,
+                  tags,
+                  options,
+                }}
+              />
+            ) : (
+              <AddToCartPanel
+                purchaseId="product-purchase"
+                product={{
+                  ...product,
+                  media,
+                  tags,
+                  options,
+                }}
+              />
+            )}
           </section>
         </div>
       </div>

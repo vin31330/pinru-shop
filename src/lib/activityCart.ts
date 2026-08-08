@@ -1,5 +1,5 @@
 import { loadCart, makeCartId, replaceCartItem, saveCart } from "@/lib/cart";
-import { buildDefaultProductPurchase } from "@/lib/pricingEngine";
+import { resolveProductPrice } from "@/lib/pricingEngine";
 import { Activity, ActivitySelection } from "@/types/activity";
 import { CartItem } from "@/types/product";
 
@@ -31,7 +31,9 @@ function buildActivityCartItem(
     const product = activity.products.find(
       (relation) => relation.productId === selection.productId,
     )?.product;
-    return sum + (product ? buildDefaultProductPurchase(product).originalPrice : 0);
+    if (!product) return sum;
+    const resolved = resolveProductPrice(product, selection.selectedOptions);
+    return sum + (resolved.ok ? resolved.originalPrice : (product.basePrice ?? product.price));
   }, 0);
 
   return {

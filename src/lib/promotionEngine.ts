@@ -42,8 +42,12 @@ export function getActivityDiscountMethod(activity: Activity): PromotionMethod {
 }
 
 export function getActivityDiscountValue(activity: Activity): number {
+  // 優先使用後台設定的「優惠值」。
+  // 例如第二件優惠 + PERCENT_OFF + 90 = 第二件折 90%（支付 10%）。
+  // 只有舊資料明確寫「第二件半價」且沒有填優惠值時，才回退為 50%。
   const value = Number(activity.discountValue);
   if (Number.isFinite(value) && value > 0) return Math.max(0, value);
+
   const rawType = compact(activity.type);
   if (rawType.includes("SECONDHALFPRICE") || activity.type.includes("第二件半價")) return 50;
   return 0;

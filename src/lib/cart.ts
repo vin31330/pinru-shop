@@ -1,7 +1,6 @@
 import type { Activity } from "@/types/activity";
 import type { CartItem, Product } from "@/types/product";
 import {
-  buildDefaultProductPurchase,
   resolveProductPrice,
 } from "@/lib/pricingEngine";
 import {
@@ -226,13 +225,17 @@ export function reconcileCart(items: CartItem[], products: Product[], activities
         counts.set(selection.productId, count);
         const limit = relation.maxPerGroup ?? (relation.allowRepeat ? activity.requiredCount : 1);
         if (count > limit) return invalid(item, `活動商品「${selection.productName}」超過可選數量。`);
-        if (activity.selectOptionsPerItem) {
-          for (const option of relation.product.options) {
-            const selected = selection.selectedOptions[option.name];
-            if (!selected || !option.values.includes(selected)) return invalid(item, `活動商品「${selection.productName}」的規格已失效。`);
-          }
+        const selectionResolution = resolveProductPrice(
+          relation.product,
+          selection.selectedOptions,
+        );
+        if (!selectionResolution.ok) {
+          return invalid(
+            item,
+            `活動商品「${selection.productName}」：${selectionResolution.error}`,
+          );
         }
-        originalGroupPrice += buildDefaultProductPurchase(relation.product).originalPrice;
+        originalGroupPrice += selectionResolution.originalPrice;
       }
       const previousPrice = item.unitPrice;
       return {
