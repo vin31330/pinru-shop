@@ -1,5 +1,7 @@
 "use client";
 
+import { FRIENDLY_PATHS } from "@/lib/paths";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
@@ -123,7 +125,7 @@ export default function OrderSuccessPage() {
           )}
 
           <div className="mt-6 grid gap-3">
-            <Link href="/products" className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white">
+            <Link href={FRIENDLY_PATHS.allProducts} className="rounded-2xl bg-emerald-700 px-5 py-3 font-black text-white">
               繼續選購
             </Link>
           </div>

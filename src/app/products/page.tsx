@@ -10,6 +10,7 @@ import { getPublishedCategories } from "@/lib/categories";
 import { categoryNameAliases, displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
+import { categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
 
 export const revalidate = 60;
 
@@ -27,26 +28,90 @@ type ProductsPageProps = {
 function pageHref({
   q,
   category,
+  categoryLabel,
   section,
   page,
   view,
 }: {
   q: string;
   category: string;
+  categoryLabel?: string;
   section: string;
   page: number;
   view?: string;
 }): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
-  if (category) params.set("category", category);
-  if (section) params.set("section", section);
-  if (view) params.set("view", view);
   if (page > 1) params.set("page", String(page));
+
+  let basePath = "/products";
+  if (section === "hot") basePath = FRIENDLY_PATHS.hotProducts;
+  else if (section === "new") basePath = FRIENDLY_PATHS.newProducts;
+  else if (category) basePath = categoryPath(category, categoryLabel || category);
+  else if (view === "all") basePath = FRIENDLY_PATHS.allProducts;
+
+  // 搜尋頁仍保留 query；友善網址本身已包含 section/category/view，不重複塞入 query。
+  if (!section && !category && view && view !== "all") params.set("view", view);
   const query = params.toString();
-  return query ? `/products?${query}` : "/products";
+  return query ? `${basePath}?${query}` : basePath;
 }
 
+
+
+function decodeRouteValue(value: string): string {
+  let current = value.trim();
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) break;
+      current = decoded;
+    } catch {
+      break;
+    }
+  }
+  return current;
+}
+
+function normalizedSearchText(value: string | undefined): string {
+  return (value ?? "").normalize("NFKC").toLowerCase();
+}
+
+function productSearchScore(product: Awaited<ReturnType<typeof getPublishedProducts>>[number], keyword: string): number {
+  if (!keyword) return 0;
+  const terms = keyword
+    .normalize("NFKC")
+    .toLowerCase()
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+
+  if (terms.length === 0) return 0;
+
+  const name = normalizedSearchText(product.name);
+  const subtitle = normalizedSearchText(product.subtitle);
+  const description = normalizedSearchText(product.description);
+  const tags = product.tags.map((tag) => normalizedSearchText(tag));
+
+  let total = 0;
+  for (const term of terms) {
+    let termScore = 0;
+    if (name === term) termScore = Math.max(termScore, 1200);
+    else if (name.includes(term)) termScore = Math.max(termScore, 800);
+
+    if (tags.some((tag) => tag === term)) termScore = Math.max(termScore, 700);
+    else if (tags.some((tag) => tag.includes(term))) termScore = Math.max(termScore, 550);
+
+    if (subtitle.includes(term)) termScore = Math.max(termScore, 350);
+    if (description.includes(term)) termScore = Math.max(termScore, 250);
+
+    // 搜尋不再把「分類名稱」當成關鍵字來源。
+    // 每個搜尋詞都必須真的出現在商品名稱、副標題、商品說明或商品標籤。
+    if (termScore === 0) return 0;
+    total += termScore;
+  }
+
+  return total;
+}
 
 function safeInternalReturnHref(value: string): string | undefined {
   const href = value.trim();
@@ -75,9 +140,15 @@ function visiblePageNumbers(totalPages: number, currentPage: number): Array<numb
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const { q = "", category = "", section = "", page = "1", view = "", returnTo = "" } = await searchParams;
+  const raw = await searchParams;
+  const q = decodeRouteValue(raw.q ?? "");
+  const category = decodeRouteValue(raw.category ?? "");
+  const section = decodeRouteValue(raw.section ?? "");
+  const page = raw.page ?? "1";
+  const view = decodeRouteValue(raw.view ?? "");
+  const returnTo = raw.returnTo ?? "";
   const exactReturnHref = safeInternalReturnHref(returnTo);
-  const keyword = q.trim().toLowerCase();
+  const keyword = q.trim().normalize("NFKC").toLowerCase();
   const [allProducts, sheetCategories, settings] = await Promise.all([
     getPublishedProducts(),
     getPublishedCategories(),
@@ -100,17 +171,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     ...categoryNameAliases(selectedCategory?.name || category),
   ].filter(Boolean));
 
+  const searchScores = new Map<string, number>();
   const filteredProducts = allProducts.filter((product) => {
-    const searchable = [
-      product.name,
-      product.description,
-      product.category,
-      displayCategoryName(product.category),
-      ...product.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
-    const matchesKeyword = !keyword || searchable.includes(keyword);
+    const score = keyword ? productSearchScore(product, keyword) : 0;
+    if (keyword) searchScores.set(product.id, score);
+    const matchesKeyword = !keyword || score > 0;
     const matchesCategory =
       !category ||
       selectedCategoryAliases.has(product.category) ||
@@ -127,7 +192,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   });
 
   const orderedProducts =
-    section === "hot"
+    keyword
+      ? [...filteredProducts].sort((a, b) =>
+          (searchScores.get(b.id) ?? 0) - (searchScores.get(a.id) ?? 0) ||
+          a.name.localeCompare(b.name, "zh-Hant", { numeric: true }),
+        )
+      : section === "hot"
       ? [...filteredProducts].sort(
           (a, b) =>
             (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999) ||
@@ -170,7 +240,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <Header
         showHomeButton={!mobileShowsBackButton}
         mobileBackButton={mobileShowsBackButton}
-        backFallbackHref={exactReturnHref ?? "/products"}
+        backFallbackHref={exactReturnHref ?? FRIENDLY_PATHS.allProducts}
         backLabel="回到上一頁"
         backForceFallback={Boolean(exactReturnHref)}
       />
@@ -191,7 +261,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <CategorySection
                   categories={categories}
                   sectionId="商品分類"
-                  viewAllHref="/products?view=all"
+                  viewAllHref={FRIENDLY_PATHS.allProducts}
                 />
               </div>
             )}
@@ -227,7 +297,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {currentPage > 1 ? (
                   <Link
-                    href={pageHref({ q, category, section, page: currentPage - 1, view })}
+                    href={pageHref({ q, category, categoryLabel: selectedCategory?.name, section, page: currentPage - 1, view })}
                     className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-black text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
                   >
                     上一頁
@@ -261,7 +331,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
                 {currentPage < totalPages ? (
                   <Link
-                    href={pageHref({ q, category, section, page: currentPage + 1, view })}
+                    href={pageHref({ q, category, categoryLabel: selectedCategory?.name, section, page: currentPage + 1, view })}
                     className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-black text-slate-700 hover:border-emerald-600 hover:text-emerald-700"
                   >
                     下一頁
@@ -281,7 +351,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <CategorySection
               categories={categories}
               sectionId="商品分類-下方"
-              viewAllHref="/products?view=all"
+              viewAllHref={FRIENDLY_PATHS.allProducts}
             />
           </div>
         )}

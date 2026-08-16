@@ -37,7 +37,12 @@ const ORDER_HEADERS = [
   "訂單狀態",
   "來源",
   "送單識別碼",
-  "最後更新時間"
+  "最後更新時間",
+  "優惠碼",
+  "優惠碼ID",
+  "優惠碼名稱",
+  "優惠碼折扣金額",
+  "優惠碼說明"
 ];
 
 const ORDER_ITEM_HEADERS = [
@@ -59,7 +64,8 @@ const ORDER_ITEM_HEADERS = [
   "小計",
   "規格摘要",
   "商品內容摘要",
-  "顯示順序"
+  "顯示順序",
+  "優惠碼折扣分攤"
 ];
 
 const ORDER_SELECTION_HEADERS = [
@@ -166,6 +172,15 @@ function handleCreateOrder_(payload) {
       Array.isArray(payload.items)
         ? payload.items
         : [];
+
+    // 優惠碼在 Apps Script 再驗證一次，避免只相信瀏覽器或前端 API 傳入的金額。
+    const couponCheck = validateCouponForOrder_(
+      spreadsheet,
+      ordersSheet,
+      payload,
+      items,
+      now
+    );
 
     const itemRows = [];
     const selectionRows = [];
@@ -307,7 +322,8 @@ function handleCreateOrder_(payload) {
           itemSubtotal,
           optionSummary,
           contentSummary,
-          itemIndex + 1
+          itemIndex + 1,
+          safeNumber_(couponCheck.allocations[itemIndex] || 0)
         ]);
 
         appendItemSelectionRows_(
@@ -327,35 +343,21 @@ function handleCreateOrder_(payload) {
     );
 
     /*
-     * 訂單總額以網站當下結帳金額為主。
-     * 若 payload 沒有正確帶入，才使用明細計算值。
+     * 商品與活動價格由明細重新計算；優惠碼則由上方 couponCheck 再驗證。
      */
-    let orderTotal =
-      safeNumber_(
-        payload.totalAmount
-      );
-
-    if (
-      orderTotal <= 0 &&
-      calculatedDealTotal > 0
-    ) {
-      orderTotal =
-        calculatedDealTotal;
-    }
+    let orderTotal = calculatedDealTotal - safeNumber_(couponCheck.discountAmount);
+    orderTotal = Math.max(0, orderTotal);
 
     if (goodsSubtotal === 0) {
-      goodsSubtotal =
-        orderTotal +
-        totalDiscount;
+      goodsSubtotal = calculatedDealTotal + totalDiscount;
     }
 
-    if (totalDiscount === 0) {
-      totalDiscount =
-        Math.max(
-          0,
-          goodsSubtotal -
-            orderTotal
-        );
+    // Orders「優惠折扣」保留為總折扣：活動折扣 + 優惠碼折扣。
+    totalDiscount += safeNumber_(couponCheck.discountAmount);
+
+    const clientOrderTotal = safeNumber_(payload.totalAmount);
+    if (Math.abs(clientOrderTotal - orderTotal) > 0.5) {
+      throw new Error("商品價格或優惠碼金額已更新，請返回購物車重新確認。");
     }
 
     const orderSummary =
@@ -400,13 +402,22 @@ function handleCreateOrder_(payload) {
       "送單識別碼":
         clientRequestId,
       "最後更新時間":
-        now
+        now,
+      "優惠碼": couponCheck.code || "",
+      "優惠碼ID": couponCheck.id || "",
+      "優惠碼名稱": couponCheck.name || "",
+      "優惠碼折扣金額": safeNumber_(couponCheck.discountAmount),
+      "優惠碼說明": couponCheck.description || ""
     };
 
     appendObjectRow_(
       ordersSheet,
       orderData
     );
+
+    if (couponCheck.code) {
+      updateCouponUsedCount_(spreadsheet, ordersSheet, couponCheck.id, couponCheck.code);
+    }
 
     if (itemRows.length) {
       itemsSheet
@@ -475,6 +486,249 @@ function handleCreateOrder_(payload) {
   }
 }
 
+
+
+/**
+ * 優惠碼後端驗證。
+ * - 沒有優惠碼：直接回傳 0 折扣。
+ * - 有優惠碼：檢查顯示、日期、使用上限、活動併用、商品/分類範圍、最低消費、最高折抵。
+ */
+function validateCouponForOrder_(spreadsheet, ordersSheet, payload, items, now) {
+  const code = safeText_(payload.couponCode).trim().toUpperCase();
+  const empty = {
+    code: "",
+    id: "",
+    name: "",
+    description: "",
+    discountAmount: 0,
+    allocations: items.map(function () { return 0; })
+  };
+  if (!code) return empty;
+
+  const couponsSheet = spreadsheet.getSheetByName("Coupons");
+  if (!couponsSheet || couponsSheet.getLastRow() < 2) {
+    throw new Error("找不到此優惠碼。");
+  }
+
+  const couponValues = couponsSheet.getDataRange().getValues();
+  const couponHeaders = couponValues[0].map(function (value) { return String(value).trim(); });
+  const couponIndex = {};
+  couponHeaders.forEach(function (header, index) { couponIndex[header] = index; });
+  const couponRow = couponValues.slice(1).find(function (row) {
+    return String(row[couponIndex["優惠碼"]] || "").trim().toUpperCase() === code;
+  });
+  if (!couponRow) throw new Error("找不到此優惠碼。");
+
+  function cv(name) {
+    const index = couponIndex[name];
+    return index === undefined ? "" : couponRow[index];
+  }
+  function yes(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["true", "yes", "y", "1", "是", "顯示", "啟用"].indexOf(normalized) >= 0 || value === true;
+  }
+  function numeric(value) {
+    if (value === "" || value === null || value === undefined) return null;
+    const number = Number(String(value).replace(/[,，\s]/g, ""));
+    return isFinite(number) ? number : null;
+  }
+  function timeValue(value) {
+    if (!value) return null;
+    if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) return value.getTime();
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed.getTime();
+  }
+
+  if (!yes(cv("顯示狀態"))) throw new Error("找不到此優惠碼。");
+  const start = timeValue(cv("開始日期"));
+  const end = timeValue(cv("結束日期"));
+  if (start !== null && now.getTime() < start) throw new Error("此優惠碼尚未開始。");
+  if (end !== null && now.getTime() > end) throw new Error("此優惠碼已結束。");
+
+  const couponId = safeText_(cv("優惠碼ID"));
+  const maxUses = numeric(cv("總使用次數上限"));
+  if (maxUses !== null && maxUses >= 0) {
+    const headers = getSheetHeaders_(ordersSheet);
+    const idIndex = headers.indexOf("優惠碼ID");
+    const codeIndex = headers.indexOf("優惠碼");
+    const statusIndex = headers.indexOf("訂單狀態");
+    let used = 0;
+    if (ordersSheet.getLastRow() >= 2 && (idIndex >= 0 || codeIndex >= 0)) {
+      const rows = ordersSheet.getRange(2, 1, ordersSheet.getLastRow() - 1, headers.length).getValues();
+      rows.forEach(function (row) {
+        const matched = (idIndex >= 0 && couponId && String(row[idIndex] || "") === couponId) ||
+          (codeIndex >= 0 && String(row[codeIndex] || "").trim().toUpperCase() === code);
+        const status = statusIndex >= 0 ? String(row[statusIndex] || "") : "";
+        if (matched && status !== "已取消") used += 1;
+      });
+    }
+    if (used >= maxUses) throw new Error("此優惠碼已達使用上限。");
+  }
+
+  const hasActivity = items.some(function (item) {
+    const options = item.selectedOptions || {};
+    return safeText_(item.activityId) || safeText_(options["活動ID"]) || safeText_(item.itemType) === "activity";
+  });
+  if (hasActivity && !yes(cv("是否可與活動併用"))) {
+    throw new Error("此優惠碼無法與目前活動優惠同時使用。");
+  }
+
+  const scope = String(cv("適用範圍") || "ALL").trim().toUpperCase();
+  const productRules = readCouponRelations_(spreadsheet, "Coupon Products", couponId, "商品ID");
+  const categoryRules = readCouponRelations_(spreadsheet, "Coupon Categories", couponId, "分類ID");
+  const productCategories = readProductCategoryMap_(spreadsheet);
+
+  const eligibleFlags = [];
+  const itemSubtotals = [];
+  items.forEach(function (item) {
+    const itemSubtotal = safeNumber_(item.unitPrice) * Math.max(1, safeInteger_(item.quantity, 1));
+    itemSubtotals.push(itemSubtotal);
+    const productId = safeText_(item.productId);
+    const categoryId = productCategories[productId] || "";
+    if (productRules.exclude[productId] || (categoryId && categoryRules.exclude[categoryId])) {
+      eligibleFlags.push(false);
+      return;
+    }
+    if (scope === "PRODUCTS") {
+      eligibleFlags.push(Boolean(productRules.include[productId]));
+      return;
+    }
+    if (scope === "CATEGORIES") {
+      eligibleFlags.push(Boolean(categoryId && categoryRules.include[categoryId]));
+      return;
+    }
+    eligibleFlags.push(true);
+  });
+
+  let eligibleSubtotal = 0;
+  itemSubtotals.forEach(function (amount, index) {
+    if (eligibleFlags[index]) eligibleSubtotal += amount;
+  });
+  if (eligibleSubtotal <= 0) throw new Error("目前購物車內沒有適用此優惠碼的商品。");
+
+  const minSpend = numeric(cv("最低消費金額"));
+  if (minSpend !== null && eligibleSubtotal + 0.0001 < minSpend) {
+    const short = Math.ceil(minSpend - eligibleSubtotal);
+    throw new Error("此優惠碼滿 NT$" + Math.ceil(minSpend) + " 才能使用，目前還差 NT$" + short + "。");
+  }
+
+  const type = String(cv("優惠類型") || "FIXED_OFF").trim().toUpperCase();
+  const value = Math.max(0, numeric(cv("優惠值")) || 0);
+  let discount = type === "PERCENT_OFF"
+    ? eligibleSubtotal * Math.max(0, Math.min(100, 100 - value)) / 100
+    : value;
+  discount = Math.max(0, Math.min(eligibleSubtotal, discount));
+  const maxDiscount = numeric(cv("最高折抵金額"));
+  if (maxDiscount !== null) discount = Math.min(discount, Math.max(0, maxDiscount));
+  discount = Math.round(discount);
+
+  const allocations = items.map(function () { return 0; });
+  if (discount > 0 && eligibleSubtotal > 0) {
+    let assigned = 0;
+    let lastEligible = -1;
+    eligibleFlags.forEach(function (eligible, index) { if (eligible) lastEligible = index; });
+    eligibleFlags.forEach(function (eligible, index) {
+      if (!eligible) return;
+      if (index === lastEligible) {
+        allocations[index] = Math.max(0, discount - assigned);
+      } else {
+        const share = Math.round(discount * itemSubtotals[index] / eligibleSubtotal);
+        allocations[index] = share;
+        assigned += share;
+      }
+    });
+  }
+
+  return {
+    code: code,
+    id: couponId,
+    name: safeText_(cv("優惠名稱")),
+    description: safeText_(cv("優惠說明")),
+    discountAmount: discount,
+    allocations: allocations
+  };
+}
+
+function readCouponRelations_(spreadsheet, sheetName, couponId, targetHeader) {
+  const result = { include: {}, exclude: {} };
+  if (!couponId) return result;
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) return result;
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(function (value) { return String(value).trim(); });
+  const couponIndex = headers.indexOf("優惠碼ID");
+  const targetIndex = headers.indexOf(targetHeader);
+  const relationIndex = headers.indexOf("關係");
+  const publishedIndex = headers.indexOf("顯示狀態");
+  if (couponIndex < 0 || targetIndex < 0) return result;
+  values.slice(1).forEach(function (row) {
+    if (String(row[couponIndex] || "") !== couponId) return;
+    if (publishedIndex >= 0) {
+      const normalized = String(row[publishedIndex] || "").trim().toLowerCase();
+      if (["false", "no", "n", "0", "否", "停用"].indexOf(normalized) >= 0) return;
+    }
+    const target = String(row[targetIndex] || "").trim();
+    if (!target) return;
+    const relation = relationIndex >= 0 ? String(row[relationIndex] || "INCLUDE").trim().toUpperCase() : "INCLUDE";
+    if (relation === "EXCLUDE") result.exclude[target] = true;
+    else result.include[target] = true;
+  });
+  return result;
+}
+
+
+function updateCouponUsedCount_(spreadsheet, ordersSheet, couponId, couponCode) {
+  const couponsSheet = spreadsheet.getSheetByName("Coupons");
+  if (!couponsSheet || couponsSheet.getLastRow() < 2) return;
+  const couponValues = couponsSheet.getDataRange().getValues();
+  const couponHeaders = couponValues[0].map(function (value) { return String(value).trim(); });
+  const couponIdIndex = couponHeaders.indexOf("優惠碼ID");
+  const couponCodeIndex = couponHeaders.indexOf("優惠碼");
+  const usedIndex = couponHeaders.indexOf("已使用次數");
+  if (usedIndex < 0) return;
+
+  const orderHeaders = getSheetHeaders_(ordersSheet);
+  const orderIdIndex = orderHeaders.indexOf("優惠碼ID");
+  const orderCodeIndex = orderHeaders.indexOf("優惠碼");
+  const orderStatusIndex = orderHeaders.indexOf("訂單狀態");
+  let used = 0;
+  if (ordersSheet.getLastRow() >= 2) {
+    const orderRows = ordersSheet.getRange(2, 1, ordersSheet.getLastRow() - 1, orderHeaders.length).getValues();
+    orderRows.forEach(function (row) {
+      const matched = (orderIdIndex >= 0 && couponId && String(row[orderIdIndex] || "") === couponId) ||
+        (orderCodeIndex >= 0 && String(row[orderCodeIndex] || "").trim().toUpperCase() === String(couponCode || "").trim().toUpperCase());
+      const status = orderStatusIndex >= 0 ? String(row[orderStatusIndex] || "") : "";
+      if (matched && status !== "已取消") used += 1;
+    });
+  }
+
+  for (let rowIndex = 1; rowIndex < couponValues.length; rowIndex += 1) {
+    const row = couponValues[rowIndex];
+    const matched = (couponIdIndex >= 0 && couponId && String(row[couponIdIndex] || "") === couponId) ||
+      (couponCodeIndex >= 0 && String(row[couponCodeIndex] || "").trim().toUpperCase() === String(couponCode || "").trim().toUpperCase());
+    if (matched) {
+      couponsSheet.getRange(rowIndex + 1, usedIndex + 1).setValue(used);
+      break;
+    }
+  }
+}
+
+function readProductCategoryMap_(spreadsheet) {
+  const map = {};
+  const sheet = spreadsheet.getSheetByName("products") || spreadsheet.getSheetByName("Products");
+  if (!sheet || sheet.getLastRow() < 2) return map;
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(function (value) { return String(value).trim(); });
+  const productIndex = headers.indexOf("商品ID");
+  const categoryIndex = headers.indexOf("分類ID");
+  if (productIndex < 0 || categoryIndex < 0) return map;
+  values.slice(1).forEach(function (row) {
+    const productId = String(row[productIndex] || "").trim();
+    const categoryId = String(row[categoryIndex] || "").trim();
+    if (productId) map[productId] = categoryId;
+  });
+  return map;
+}
 
 /**
  * 依送單識別碼尋找已存在的訂單。

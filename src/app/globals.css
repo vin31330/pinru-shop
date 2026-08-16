@@ -3,6 +3,7 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --global-ticker-height: 0px;
 }
 
 * {
@@ -522,4 +523,98 @@ select {
   outline-offset: 5px;
   box-shadow: 0 0 0 10px rgb(16 185 129 / 0.10);
   transition: outline-color 300ms ease, box-shadow 300ms ease;
+}
+
+/* V7.5：全站公告跑馬燈 */
+.global-ticker {
+  width: 100%;
+  overflow: hidden;
+  border-bottom: 1px solid #e6d39a;
+  background: #fff8df;
+  color: #5b3a1f;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.global-ticker-track {
+  display: flex;
+  width: max-content;
+  min-width: 200%;
+  animation: global-ticker-scroll var(--ticker-duration, 28s) linear infinite;
+  will-change: transform;
+}
+.global-ticker-item {
+  display: inline-block;
+  min-width: 50%;
+  padding: 0.42rem 3rem;
+  white-space: nowrap;
+  text-align: center;
+}
+@keyframes global-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .global-ticker { overflow-x: auto; }
+  .global-ticker-track { min-width: max-content; animation: none; }
+  .global-ticker-item[aria-hidden="true"] { display: none; }
+}
+
+/* V7.5：放大字體／高縮放手機的 reflow 安全層。
+   不禁止使用者放大文字或縮放，只避免固定寬度把整頁撐出螢幕。 */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+}
+body {
+  overflow-x: auto;
+}
+img,
+video,
+iframe,
+svg {
+  max-width: 100%;
+}
+h1,
+h2,
+h3,
+h4,
+p,
+a,
+button,
+label,
+span {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .site-header-row {
+    width: 100%;
+    max-width: 100vw;
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .site-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .site-brand-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.15;
+  }
+  [data-site-header] form {
+    max-width: 100%;
+  }
+  [data-site-header] input {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .global-ticker-item {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }

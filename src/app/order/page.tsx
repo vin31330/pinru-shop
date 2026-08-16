@@ -7,9 +7,11 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ProductImage from "@/components/ProductImage";
 import { clearCart, loadCart, reconcileCart, saveCart } from "@/lib/cart";
+import { clearAppliedCoupon, loadAppliedCoupon, requestCouponValidation, type AppliedCoupon } from "@/lib/couponClient";
 import { createOrder } from "@/lib/orders";
 import { Activity } from "@/types/activity";
 import { CartItem, Product } from "@/types/product";
+import { activityPath, productPath } from "@/lib/paths";
 
 const currency = new Intl.NumberFormat("zh-TW");
 const ORDER_DRAFT_KEY = "pinru-shop-order-draft";
@@ -66,6 +68,8 @@ export default function OrderPage() {
   const [validationError, setValidationError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponNotice, setCouponNotice] = useState("");
   const submitLockRef = useRef(false);
 
   useEffect(() => {
@@ -74,18 +78,39 @@ export default function OrderPage() {
       if (saved) setDraft({ ...emptyDraft, ...JSON.parse(saved) });
     } catch {}
 
+    const savedCoupon = loadAppliedCoupon();
+    if (savedCoupon) setAppliedCoupon(savedCoupon);
+
     const current = loadCart();
     setItems(current);
     Promise.all([
       fetch("/api/products").then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Product[]>; }),
       fetch("/api/activities").then((response) => { if (!response.ok) throw new Error(); return response.json() as Promise<Activity[]>; }),
     ])
-      .then(([products, activities]) => {
+      .then(async ([products, activities]) => {
         const next = reconcileCart(current, products, activities);
         saveCart(next);
         setItems(next);
         if (next.some((item) => item.validationStatus === "invalid")) {
           setValidationError("購物車內有下架或規格失效的商品，請返回購物車處理後再送出。");
+        }
+        if (savedCoupon?.code) {
+          const result = await requestCouponValidation(savedCoupon.code, next.filter((item) => item.validationStatus !== "invalid"));
+          if (result.ok && result.coupon) {
+            setAppliedCoupon({
+              code: result.coupon.code,
+              id: result.coupon.id,
+              name: result.coupon.name,
+              description: result.coupon.description || "",
+              discountAmount: Number(result.discountAmount || 0),
+              finalTotal: Number(result.finalTotal || 0),
+              eligibleSubtotal: Number(result.eligibleSubtotal || 0),
+            });
+          } else {
+            clearAppliedCoupon();
+            setAppliedCoupon(null);
+            setCouponNotice(`${result.message} 優惠碼已自動移除。`);
+          }
         }
       })
       .catch(() => setValidationError("目前無法確認最新商品資料，為避免價格錯誤，暫時不能送出訂單。"))
@@ -97,10 +122,12 @@ export default function OrderPage() {
   }, [draft]);
 
   const validItems = items.filter((item) => item.validationStatus !== "invalid");
-  const totalAmount = useMemo(
+  const subtotalAmount = useMemo(
     () => validItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     [validItems],
   );
+  const couponDiscount = Math.max(0, appliedCoupon?.discountAmount || 0);
+  const totalAmount = Math.max(0, subtotalAmount - couponDiscount);
 
   function update<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -119,6 +146,7 @@ export default function OrderPage() {
     return JSON.stringify({
       customer,
       totalAmount,
+      couponCode: appliedCoupon?.code || "",
       items: validItems.map((item) => ({
         cartId: item.cartId,
         productId: item.productId,
@@ -201,6 +229,8 @@ export default function OrderPage() {
       "訂購明細：",
       detail,
       "",
+      `商品／活動後小計：NT$${currency.format(subtotalAmount)}`,
+      appliedCoupon ? `優惠碼 ${appliedCoupon.code}：-NT$${currency.format(couponDiscount)}` : "",
       `總金額：NT$${currency.format(totalAmount)}`,
       customer.note ? `備註：${customer.note}` : "",
     ].filter(Boolean).join("\n");
@@ -230,6 +260,7 @@ export default function OrderPage() {
         clientRequestId: pendingOrder.clientRequestId,
         customer,
         items: validItems,
+        couponCode: appliedCoupon?.code || "",
         totalAmount,
         lineMessage: baseMessage,
         submittedAt: pendingOrder.createdAt,
@@ -243,6 +274,7 @@ export default function OrderPage() {
         "您好，我已送出網站訂單。",
         `訂單編號：${result.orderNumber}`,
         `收件人：${customer.name}`,
+        appliedCoupon ? `優惠碼：${appliedCoupon.code}（折抵 NT$${currency.format(couponDiscount)}）` : "",
         `總金額：NT$${currency.format(totalAmount)}`,
         result.duplicate ? "此訂單已成功建立，系統未重複新增。" : "",
         "麻煩幫我確認訂單，謝謝。",
@@ -250,6 +282,7 @@ export default function OrderPage() {
 
       clearPendingOrder(pendingOrder.clientRequestId);
       localStorage.removeItem(ORDER_DRAFT_KEY);
+      clearAppliedCoupon();
       clearCart();
 
       sessionStorage.setItem(
@@ -288,6 +321,7 @@ export default function OrderPage() {
         {checking && <div className="mt-4 rounded-2xl bg-amber-50 p-4 font-bold text-amber-700">正在再次確認商品與最新價格……</div>}
         {validationError && <div className="mt-4 rounded-2xl bg-rose-50 p-4 font-bold text-rose-700">{validationError} <Link href="/cart" className="underline">返回購物車</Link></div>}
         {submitError && <div className="mt-4 rounded-2xl bg-rose-50 p-4 font-bold text-rose-700">{submitError}</div>}
+        {couponNotice && <div className="mt-4 rounded-2xl bg-amber-50 p-4 font-bold text-amber-700">{couponNotice}</div>}
 
         <div className="mt-6 space-y-5 rounded-3xl bg-white p-5">
           <div>
@@ -373,8 +407,8 @@ export default function OrderPage() {
           <div className="mt-4 space-y-3">
             {validItems.map((item) => {
               const itemHref = item.itemType === "activity" && item.activityId
-                ? `/activities/${encodeURIComponent(item.activityId)}`
-                : `/products/${encodeURIComponent(item.productId)}`;
+                ? activityPath(item.activityId, item.name)
+                : productPath(item.productId, item.name);
 
               return (
                 <div key={item.cartId} className="flex gap-3 border-b pb-3 last:border-b-0 last:pb-0">
@@ -411,7 +445,11 @@ export default function OrderPage() {
               );
             })}
           </div>
-          <div className="mt-4 flex justify-between text-xl font-black"><span>總金額</span><span className="text-rose-600">NT${currency.format(totalAmount)}</span></div>
+          <div className="mt-4 flex justify-between font-bold"><span>商品／活動後小計</span><span>NT${currency.format(subtotalAmount)}</span></div>
+          {appliedCoupon && (
+            <div className="mt-2 flex justify-between font-black text-emerald-700"><span>優惠碼 {appliedCoupon.code}</span><span>-NT${currency.format(couponDiscount)}</span></div>
+          )}
+          <div className="mt-3 flex justify-between text-xl font-black"><span>總金額</span><span className="text-rose-600">NT${currency.format(totalAmount)}</span></div>
         </div>
 
         <div className="mt-6 space-y-3">

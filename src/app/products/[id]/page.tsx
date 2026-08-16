@@ -5,7 +5,9 @@ import { FloatingBackButton } from "@/components/BackButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import ProductGallery from "@/components/ProductGallery";
+import RichProductDescription from "@/components/RichProductDescription";
 import { getProductById } from "@/lib/products";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 import { getActivityById } from "@/lib/activities";
 
 export const revalidate = 60;
@@ -49,7 +51,7 @@ export default async function ProductPage({
     ? query.returnTo
     : activity
       ? `/activities/${encodeURIComponent(activity.id)}`
-      : "/products";
+      : FRIENDLY_PATHS.allProducts;
 
   const media = Array.isArray(product.media)
     ? product.media
@@ -69,8 +71,8 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Header showBackButton backFallbackHref={activityRelation ? activityReturnHref : "/products"} />
-      <FloatingBackButton fallbackHref={activityRelation ? activityReturnHref : "/products"} />
+      <Header showBackButton backFallbackHref={activityRelation ? activityReturnHref : FRIENDLY_PATHS.allProducts} />
+      <FloatingBackButton fallbackHref={activityRelation ? activityReturnHref : FRIENDLY_PATHS.allProducts} />
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -142,10 +144,7 @@ export default async function ProductPage({
               選擇規格、數量並加入購物車 ↓
             </a>
 
-            <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
-              {product.description ||
-                "商品詳細內容請洽 LINE 官方帳號。"}
-            </p>
+            <RichProductDescription description={product.description} />
 
             {visibleTags.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">

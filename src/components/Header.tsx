@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, MouseEvent, useEffect, useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 import { HeaderBackButton } from "@/components/BackButton";
 import CartCount from "@/components/CartCount";
 import { HeaderHomeButton, HomeButtonLink } from "@/components/FloatingHomeButton";
+import { categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
 
 type HeaderProps = {
   showHomeButton?: boolean;
@@ -18,19 +19,19 @@ type HeaderProps = {
 };
 
 const navigationItems = [
-  { label: "點我回首頁", href: "/", group: "main" },
-  { label: "優惠活動", href: "/activities", group: "main" },
-  { label: "熱銷商品", href: "/products?section=hot", group: "main" },
-  { label: "新品推薦", href: "/products?section=new", group: "main" },
-  { label: "查看全部商品", href: "/products?view=all", group: "main" },
-  { label: "平底鍋、炒鍋、湯鍋", href: "/products?category=平底鍋、炒鍋、湯鍋", group: "category" },
-  { label: "保溫杯、水壺、玻璃壺、咖啡杯", href: "/products?category=保溫杯、水壺、玻璃壺、咖啡杯", group: "category" },
-  { label: "便當盒、保鮮盒、手提袋、保溫袋", href: "/products?category=便當盒、保鮮盒、手提袋、保溫袋", group: "category" },
-  { label: "廚房器具", href: "/products?category=廚房器具", group: "category" },
-  { label: "按摩系列、保養品、個人清潔", href: "/products?category=按摩系列、保養品、個人清潔", group: "category" },
-  { label: "清潔用品", href: "/products?category=清潔用品", group: "category" },
-  { label: "瓦斯爐、刀具、砧板", href: "/products?category=瓦斯爐、刀具、砧板", group: "category" },
-  { label: "生活小物", href: "/products?category=生活小物", group: "category" },
+  { label: "點我回首頁", href: FRIENDLY_PATHS.home, group: "main" },
+  { label: "優惠活動", href: FRIENDLY_PATHS.activities, group: "main" },
+  { label: "熱銷商品", href: FRIENDLY_PATHS.hotProducts, group: "main" },
+  { label: "新品推薦", href: FRIENDLY_PATHS.newProducts, group: "main" },
+  { label: "查看全部商品", href: FRIENDLY_PATHS.allProducts, group: "main" },
+  { label: "平底鍋、炒鍋、湯鍋", href: categoryPath("平底鍋、炒鍋、湯鍋", "平底鍋、炒鍋、湯鍋"), group: "category" },
+  { label: "保溫杯、水壺、玻璃壺、咖啡杯", href: categoryPath("保溫杯、水壺、玻璃壺、咖啡杯", "保溫杯、水壺、玻璃壺、咖啡杯"), group: "category" },
+  { label: "便當盒、保鮮盒、手提袋、保溫袋", href: categoryPath("便當盒、保鮮盒、手提袋、保溫袋", "便當盒、保鮮盒、手提袋、保溫袋"), group: "category" },
+  { label: "廚房器具", href: categoryPath("廚房器具", "廚房器具"), group: "category" },
+  { label: "按摩系列、保養品、個人清潔", href: categoryPath("按摩系列、保養品、個人清潔", "按摩系列、保養品、個人清潔"), group: "category" },
+  { label: "清潔用品", href: categoryPath("清潔用品", "清潔用品"), group: "category" },
+  { label: "瓦斯爐、刀具、砧板", href: categoryPath("瓦斯爐、刀具、砧板", "瓦斯爐、刀具、砧板"), group: "category" },
+  { label: "生活小物", href: categoryPath("生活小物", "生活小物"), group: "category" },
 ] as const;
 
 function SearchIcon() {
@@ -57,12 +58,15 @@ export default function Header({
   backLabel,
   backForceFallback = false,
 }: HeaderProps) {
-  const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const lineUrl =
     process.env.NEXT_PUBLIC_LINE_OFFICIAL_URL ||
     "https://line.me/R/ti/p/@284eiqba";
+
+  useEffect(() => {
+    router.prefetch(FRIENDLY_PATHS.allProducts);
+  }, [router]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -78,17 +82,11 @@ export default function Header({
     };
   }, [menuOpen]);
 
-  function search(event: FormEvent) {
-    event.preventDefault();
-    setMenuOpen(false);
-    router.push(query.trim() ? `/products?q=${encodeURIComponent(query.trim())}` : "/products");
-  }
-
   function navigateFromMenu(event: MouseEvent<HTMLAnchorElement>, href: string) {
     setMenuOpen(false);
 
     const needsExactReturn =
-      href === "/products?view=all" || href.includes("category=");
+      href === FRIENDLY_PATHS.allProducts || href.startsWith("/products/category/");
 
     if (!needsExactReturn) return;
 
@@ -109,7 +107,7 @@ export default function Header({
         data-site-header
         className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur"
       >
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:gap-6">
+        <div className="site-header-row mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:gap-6">
           <button
             type="button"
             aria-label="開啟網站導覽選單"
@@ -123,26 +121,25 @@ export default function Header({
             <span className="mt-0.5 text-[10px] leading-none">選單</span>
           </button>
 
-          <Link href="/" className="min-w-0 shrink-0">
-            <div className="truncate text-xl font-black tracking-tight text-emerald-700 lg:text-2xl">
+          <Link href={FRIENDLY_PATHS.home} className="site-brand min-w-0 shrink-0">
+            <div className="site-brand-title truncate text-xl font-black tracking-tight text-emerald-700 lg:text-2xl">
               世界好用 小新和品儒
             </div>
             <div className="text-xs text-slate-500 lg:text-sm">鍋具・五金・生活百貨</div>
           </Link>
 
-          <form onSubmit={search} className="hidden min-w-0 flex-1 md:block">
+          <form action={FRIENDLY_PATHS.allProducts} method="get" className="hidden min-w-0 flex-1 md:block">
             <div className="flex h-12 items-center gap-2 rounded-xl border border-slate-300 bg-white pl-4 pr-1 shadow-sm focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
               <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜尋商品名稱、分類或關鍵字"
+                name="q"
+                placeholder="搜尋商品名稱、商品說明或標籤"
                 aria-label="搜尋商品"
                 className="w-full bg-transparent text-base outline-none"
               />
               <button
                 type="submit"
                 aria-label="搜尋"
-                className="grid h-10 w-12 shrink-0 touch-manipulation place-items-center rounded-lg text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100"
+                className="grid h-10 min-w-12 shrink-0 touch-manipulation place-items-center rounded-lg px-2 text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100"
               >
                 <SearchIcon />
               </button>
@@ -153,7 +150,7 @@ export default function Header({
             href={lineUrl}
             target="_blank"
             rel="noreferrer"
-            className="ml-auto flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 font-black text-slate-900 transition hover:bg-slate-50 md:flex-row md:gap-2 md:px-2 md:py-1.5"
+            className="site-line-link ml-auto flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1 py-1 font-black text-slate-900 transition hover:bg-slate-50 md:flex-row md:gap-2 md:px-2 md:py-1.5"
             aria-label="開啟 LINE 官方帳號"
           >
             <Image
@@ -179,19 +176,18 @@ export default function Header({
           </Link>
         </div>
 
-        <form onSubmit={search} className="px-4 pb-3 md:hidden">
+        <form action={FRIENDLY_PATHS.allProducts} method="get" className="px-4 pb-3 md:hidden">
           <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 rounded-xl border border-slate-300 bg-white pl-4 pr-1 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
             <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜尋商品名稱、分類或關鍵字"
+              name="q"
+              placeholder="搜尋商品名稱、商品說明或標籤"
               aria-label="搜尋商品"
               className="h-full min-w-0 flex-1 bg-transparent text-base outline-none"
             />
             <button
               type="submit"
               aria-label="搜尋"
-              className="grid h-12 w-14 shrink-0 touch-manipulation place-items-center rounded-xl text-slate-700 transition active:bg-emerald-100 active:text-emerald-800"
+              className="grid h-12 min-w-14 shrink-0 touch-manipulation place-items-center rounded-xl px-2 text-slate-700 transition active:bg-emerald-100 active:text-emerald-800"
             >
               <SearchIcon />
             </button>

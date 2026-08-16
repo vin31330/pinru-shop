@@ -16,6 +16,7 @@ export type CreateOrderPayload = {
   clientRequestId: string;
   customer: OrderCustomer;
   items: CartItem[];
+  couponCode?: string;
   totalAmount: number;
   lineMessage: string;
   submittedAt: string;

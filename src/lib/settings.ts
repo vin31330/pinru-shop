@@ -11,6 +11,9 @@ export type SiteSettings = {
   homeCategoryCount: number;
   productPageSize: number;
   searchPageSize: number;
+  announcementTickerEnabled: boolean;
+  announcementTickerText: string;
+  announcementTickerSpeed: number;
 };
 
 const DEFAULT_SETTINGS: SiteSettings = {
@@ -23,6 +26,9 @@ const DEFAULT_SETTINGS: SiteSettings = {
   homeCategoryCount: 8,
   productPageSize: 20,
   searchPageSize: 20,
+  announcementTickerEnabled: false,
+  announcementTickerText: "",
+  announcementTickerSpeed: 28,
 };
 
 function positiveInteger(value: string, fallback: number): number {
@@ -47,6 +53,15 @@ async function buildSiteSettings(): Promise<SiteSettings> {
 
   const read = (key: string, fallback: number) =>
     positiveInteger(values.get(key.toLowerCase()) ?? "", fallback);
+  const readString = (key: string, fallback = "") =>
+    (values.get(key.toLowerCase()) ?? fallback).trim();
+  const readBoolean = (key: string, fallback: boolean) => {
+    const raw = readString(key).toLowerCase();
+    if (!raw) return fallback;
+    if (["true", "yes", "y", "1", "是", "顯示", "啟用", "開啟"].includes(raw)) return true;
+    if (["false", "no", "n", "0", "否", "不顯示", "停用", "關閉"].includes(raw)) return false;
+    return fallback;
+  };
 
   return {
     homeBannerCount: read("HomeBannerCount", DEFAULT_SETTINGS.homeBannerCount),
@@ -58,16 +73,26 @@ async function buildSiteSettings(): Promise<SiteSettings> {
     homeCategoryCount: read("HomeCategoryCount", DEFAULT_SETTINGS.homeCategoryCount),
     productPageSize: read("ProductPageSize", DEFAULT_SETTINGS.productPageSize),
     searchPageSize: read("SearchPageSize", DEFAULT_SETTINGS.searchPageSize),
+    announcementTickerEnabled: readBoolean("AnnouncementTickerEnabled", DEFAULT_SETTINGS.announcementTickerEnabled),
+    announcementTickerText: readString("AnnouncementTickerText", DEFAULT_SETTINGS.announcementTickerText),
+    announcementTickerSpeed: read("AnnouncementTickerSpeed", DEFAULT_SETTINGS.announcementTickerSpeed),
   };
 }
 
 const getSiteSettingsCached = unstable_cache(
   buildSiteSettings,
-  ["pinru-site-settings-v6-1"],
+  ["pinru-site-settings-v7-5-2"],
   { revalidate: 60 },
 );
 
 export async function getSiteSettings(): Promise<SiteSettings> {
   return getSiteSettingsCached();
+}
+
+// Used by endpoints that must reflect Settings immediately instead of reusing
+// the persistent Next.js settings cache. The sheet fetch itself still has its
+// own short revalidation window.
+export async function getSiteSettingsFresh(): Promise<SiteSettings> {
+  return buildSiteSettings();
 }
 

@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import GlobalTicker from "@/components/GlobalTicker";
 import "./globals.css";
 
 const siteName = "世界好用 小新和品儒";
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
   description: siteDescription,
   applicationName: siteName,
   manifest: "/site.webmanifest",
-  themeColor: "#166534",
   icons: {
     icon: [
       { url: "/favicon.ico?v=20260807" },
@@ -54,6 +54,13 @@ export const metadata: Metadata = {
   },
 };
 
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#166534",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -73,6 +80,9 @@ export default function RootLayout({
             <GoogleAnalytics gaId={gaId} />
           </Suspense>
         )}
+        <Suspense fallback={null}>
+          <GlobalTicker />
+        </Suspense>
         {children}
       </body>
     </html>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import ProductImage from "@/components/ProductImage";
 import { rememberReturnPosition } from "@/lib/returnPosition";
+import { productPath } from "@/lib/paths";
 import { Product } from "@/types/product";
 
 const currency = new Intl.NumberFormat("zh-TW");
@@ -18,7 +19,7 @@ export default function ProductCard({
 }) {
   const price = product.salePrice ?? product.price;
   const originalPrice = product.basePrice ?? product.price;
-  const productHref = href || `/products/${encodeURIComponent(product.id)}`;
+  const productHref = href || productPath(product.id, product.name);
   const purchaseHref = `${productHref}#product-purchase`;
 
   return (

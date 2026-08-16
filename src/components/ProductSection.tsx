@@ -1,6 +1,7 @@
 import ProductCard from "@/components/ProductCard";
 import SectionHeading from "@/components/SectionHeading";
 import { Product } from "@/types/product";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 
 export default function ProductSection({
   title,
@@ -23,10 +24,10 @@ export default function ProductSection({
         title={title}
         href={
           title === "新品推薦"
-            ? "/products?section=new"
+            ? FRIENDLY_PATHS.newProducts
             : title === "限時優惠"
               ? "/products?section=offer"
-              : "/products?section=hot"
+              : FRIENDLY_PATHS.hotProducts
         }
       />
       <div className="grid grid-cols-2 gap-3 sm:hidden">

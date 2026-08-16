@@ -29,6 +29,30 @@ function normalized(value: string) {
   return value.trim().toUpperCase().replace(/[\s_-]/g, "");
 }
 
+function stripActivityOptions(options: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(options).filter(([key]) => !key.startsWith("活動")),
+  );
+}
+
+function expandItemOptions(items: ReturnType<typeof loadCart>) {
+  return items.flatMap((item) =>
+    Array.from({ length: Math.max(1, item.quantity) }, () =>
+      stripActivityOptions(item.selectedOptions),
+    ),
+  );
+}
+
+function mergeReplacementItems(items: ReturnType<typeof buildProductCartItem>[]) {
+  const merged = new Map<string, ReturnType<typeof buildProductCartItem>>();
+  for (const item of items) {
+    const current = merged.get(item.cartId);
+    if (current) current.quantity += item.quantity;
+    else merged.set(item.cartId, { ...item });
+  }
+  return Array.from(merged.values());
+}
+
 function isBuyGet(activity: Activity) {
   const type = normalized(activity.type);
   return type.includes("BUYGET") || activity.type.includes("買") || activity.type.includes("送");
@@ -191,9 +215,15 @@ export default function PromotionalActivitySelector({
   const [benefitOptions, setBenefitOptions] = useState<Record<string, string>>(
     benefitProducts[0] ? buildActivityPurchaseOptions(benefitProducts[0].product) : {},
   );
+  const [triggerUnitOptions, setTriggerUnitOptions] = useState<Record<string, string>[]>(
+    triggerProducts[0] ? [buildActivityPurchaseOptions(triggerProducts[0].product)] : [],
+  );
+  const [benefitUnitOptions, setBenefitUnitOptions] = useState<Record<string, string>[]>(
+    benefitProducts[0] ? [buildActivityPurchaseOptions(benefitProducts[0].product)] : [],
+  );
   const [message, setMessage] = useState("");
   const [interactive, setInteractive] = useState(false);
-  const [configureTarget, setConfigureTarget] = useState<{ role: "trigger" | "benefit"; relation: ActivityProduct } | null>(null);
+  const [configureTarget, setConfigureTarget] = useState<{ role: "trigger" | "benefit"; relation: ActivityProduct; index?: number } | null>(null);
 
   useEffect(() => {
     if (editSelectionId) {
@@ -202,14 +232,16 @@ export default function PromotionalActivitySelector({
           item.selectedOptions["活動ID"] === activity.id &&
           item.selectedOptions["活動選擇識別"] === editSelectionId,
       );
-      const mainItem = existing.find(
+      const mainItems = existing.filter(
         (item) => item.selectedOptions["活動角色"] === "觸發商品",
       );
-      const benefitItem = existing.find((item) =>
+      const benefitItems = existing.filter((item) =>
         ["贈品商品", "加購商品"].includes(
           item.selectedOptions["活動角色"] ?? "",
         ),
       );
+      const mainItem = mainItems[0];
+      const benefitItem = benefitItems[0];
       const mainRelation = triggerProducts.find(
         (relation) => relation.productId === mainItem?.productId,
       );
@@ -218,19 +250,23 @@ export default function PromotionalActivitySelector({
       );
 
       if (mainItem && mainRelation) {
+        const loadedMainOptions = expandItemOptions(mainItems);
         setTriggerId(mainRelation.id);
-        setTriggerOptions(Object.fromEntries(Object.entries(mainItem.selectedOptions).filter(([key]) => !key.startsWith("活動"))));
+        setTriggerOptions(loadedMainOptions[0] ?? buildActivityPurchaseOptions(mainRelation.product));
+        setTriggerUnitOptions(loadedMainOptions);
         setQuantity(
           Math.max(
             Math.max(1, activity.triggerCount || 1),
-            mainItem.quantity,
+            loadedMainOptions.length,
           ),
         );
         if (benefitItem && benefitRelation) {
+          const loadedBenefitOptions = expandItemOptions(benefitItems);
           setBenefitId(benefitRelation.id);
-          setBenefitOptions(Object.fromEntries(Object.entries(benefitItem.selectedOptions).filter(([key]) => !key.startsWith("活動"))));
+          setBenefitOptions(loadedBenefitOptions[0] ?? buildActivityPurchaseOptions(benefitRelation.product));
+          setBenefitUnitOptions(loadedBenefitOptions);
           setIncludeAddon(true);
-          setAddonQuantity(Math.max(1, benefitItem.quantity));
+          setAddonQuantity(Math.max(1, loadedBenefitOptions.length));
         } else if (!buyGet) {
           setIncludeAddon(false);
         }
@@ -272,6 +308,12 @@ export default function PromotionalActivitySelector({
   const benefit = benefitProducts.find((item) => item.id === benefitId);
   const triggerPurchase = trigger ? getActivityPurchase(trigger.product, triggerOptions) : undefined;
   const triggerPrice = triggerPurchase?.price ?? 0;
+  const buyGetTriggerTotal = buyGet && trigger
+    ? triggerUnitOptions.slice(0, quantity).reduce(
+        (sum, options) => sum + getActivityPurchase(trigger.product, options).price,
+        0,
+      )
+    : triggerPrice * quantity;
   const triggerUnitsPerQuantity = Math.max(
     1,
     Number(triggerPurchase?.options["每組件數"]) || 1,
@@ -281,7 +323,12 @@ export default function PromotionalActivitySelector({
     1,
     Math.ceil(triggerThreshold / triggerUnitsPerQuantity),
   );
-  const triggerPieceCount = quantity * triggerUnitsPerQuantity;
+  const triggerPieceCount = buyGet && trigger
+    ? triggerUnitOptions.slice(0, quantity).reduce((total, options) => {
+        const purchase = getActivityPurchase(trigger.product, options);
+        return total + Math.max(1, Number(purchase.options["每組件數"]) || 1);
+      }, 0)
+    : quantity * triggerUnitsPerQuantity;
   const eligibleBenefitQuantity = getEligiblePromotionBenefitQuantity(
     activity,
     triggerPieceCount,
@@ -295,7 +342,7 @@ export default function PromotionalActivitySelector({
       ? eligibleBenefitQuantity
       : Math.min(Math.max(1, addonQuantity), eligibleBenefitQuantity)
     : 0;
-  const total = triggerPrice * quantity + benefitPrice * benefitQuantity;
+  const total = buyGetTriggerTotal + benefitPrice * benefitQuantity;
 
   useEffect(() => {
     setQuantity((current) => Math.max(minimumTriggerQuantity, current));
@@ -306,6 +353,24 @@ export default function PromotionalActivitySelector({
       Math.min(Math.max(1, current), Math.max(1, eligibleBenefitQuantity)),
     );
   }, [eligibleBenefitQuantity]);
+
+  useEffect(() => {
+    if (!buyGet || !trigger) return;
+    setTriggerUnitOptions((current) =>
+      Array.from({ length: quantity }, (_, index) =>
+        current[index] ?? (index === 0 ? triggerOptions : buildActivityPurchaseOptions(trigger.product)),
+      ),
+    );
+  }, [buyGet, quantity, triggerId]);
+
+  useEffect(() => {
+    if (!buyGet || !benefit) return;
+    setBenefitUnitOptions((current) =>
+      Array.from({ length: benefitQuantity }, (_, index) =>
+        current[index] ?? (index === 0 ? benefitOptions : buildActivityPurchaseOptions(benefit.product)),
+      ),
+    );
+  }, [benefitId, benefitQuantity, buyGet]);
 
   function submit(goToCart: boolean) {
     if (!trigger) {
@@ -328,43 +393,55 @@ export default function PromotionalActivitySelector({
     const activitySelectionId =
       editSelectionId ??
       `${activity.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const main = getActivityPurchase(trigger.product, triggerOptions);
-    const replacements = [
-      buildProductCartItem(
-        trigger.product,
-        quantity,
-        {
-          ...main.options,
-          活動ID: activity.id,
-          活動名稱: activity.name,
-          活動類型: activity.type,
-          活動角色: "觸發商品",
-          活動選擇識別: activitySelectionId,
-        },
-        main.price,
-        main.originalPrice,
-      ),
-    ];
-
-    if (shouldIncludeBenefit && benefit) {
-      const benefitPurchase = getActivityPurchase(benefit.product, benefitOptions);
-      replacements.push(
+    const rawReplacements: ReturnType<typeof buildProductCartItem>[] = [];
+    const mainOptionsList = buyGet
+      ? triggerUnitOptions.slice(0, quantity)
+      : [triggerOptions];
+    mainOptionsList.forEach((options) => {
+      const main = getActivityPurchase(trigger.product, options);
+      rawReplacements.push(
         buildProductCartItem(
-          benefit.product,
-          benefitQuantity,
+          trigger.product,
+          buyGet ? 1 : quantity,
           {
-            ...benefitPurchase.options,
+            ...main.options,
             活動ID: activity.id,
             活動名稱: activity.name,
             活動類型: activity.type,
-            活動角色: buyGet ? "贈品商品" : "加購商品",
+            活動角色: "觸發商品",
             活動選擇識別: activitySelectionId,
           },
-          buyGet ? 0 : benefitPrice,
-          benefitPurchase.originalPrice,
+          main.price,
+          main.originalPrice,
         ),
       );
+    });
+
+    if (shouldIncludeBenefit && benefit) {
+      const benefitOptionsList = buyGet
+        ? benefitUnitOptions.slice(0, benefitQuantity)
+        : [benefitOptions];
+      benefitOptionsList.forEach((options) => {
+        const benefitPurchase = getActivityPurchase(benefit.product, options);
+        rawReplacements.push(
+          buildProductCartItem(
+            benefit.product,
+            buyGet ? 1 : benefitQuantity,
+            {
+              ...benefitPurchase.options,
+              活動ID: activity.id,
+              活動名稱: activity.name,
+              活動類型: activity.type,
+              活動角色: buyGet ? "贈品商品" : "加購商品",
+              活動選擇識別: activitySelectionId,
+            },
+            buyGet ? 0 : benefitPrice,
+            benefitPurchase.originalPrice,
+          ),
+        );
+      });
     }
+    const replacements = mergeReplacementItems(rawReplacements);
 
     if (editSelectionId) {
       replacePromotionCartGroup(editSelectionId, replacements);
@@ -402,7 +479,9 @@ export default function PromotionalActivitySelector({
       <ActivityProductOptionModal
         open={Boolean(configureTarget)}
         product={configureTarget?.relation.product}
-        initialValue={configureTarget?.role === "trigger" ? triggerOptions : benefitOptions}
+        initialValue={configureTarget?.role === "trigger"
+          ? (configureTarget.index !== undefined ? triggerUnitOptions[configureTarget.index] : triggerOptions)
+          : (configureTarget?.index !== undefined ? benefitUnitOptions[configureTarget.index] : benefitOptions)}
         title={configureTarget?.role === "trigger" ? "選擇主商品尺寸／規格" : buyGet ? "選擇贈品尺寸／規格" : "選擇加購商品尺寸／規格"}
         confirmLabel="儲存這個規格"
         onClose={() => setConfigureTarget(null)}
@@ -411,9 +490,19 @@ export default function PromotionalActivitySelector({
           if (configureTarget.role === "trigger") {
             setTriggerId(configureTarget.relation.id);
             setTriggerOptions(selectedOptions);
+            if (buyGet && configureTarget.index !== undefined) {
+              setTriggerUnitOptions((current) => current.map((options, index) =>
+                index === configureTarget.index ? selectedOptions : options,
+              ));
+            }
           } else {
             setBenefitId(configureTarget.relation.id);
             setBenefitOptions(selectedOptions);
+            if (buyGet && configureTarget.index !== undefined) {
+              setBenefitUnitOptions((current) => current.map((options, index) =>
+                index === configureTarget.index ? selectedOptions : options,
+              ));
+            }
             if (!buyGet) setIncludeAddon(true);
           }
           setMessage(`「${configureTarget.relation.product.name}」規格已選好 ✓`);
@@ -447,16 +536,18 @@ export default function PromotionalActivitySelector({
             <ProductChoiceCard
               key={relation.id}
               relation={relation}
-              onConfigure={() => setConfigureTarget({ role: "trigger", relation })}
+              onConfigure={() => setConfigureTarget({ role: "trigger", relation, index: buyGet ? 0 : undefined })}
               selected={triggerId === relation.id}
-              selectedOptions={triggerId === relation.id ? triggerOptions : undefined}
+              selectedOptions={triggerId === relation.id ? (buyGet ? triggerUnitOptions[0] ?? triggerOptions : triggerOptions) : undefined}
               label="購買這項商品"
               priceLabel={`NT$${currency.format(getActivityPurchase(relation.product).price)}`}
               priceMode="product"
               disabled={!interactive}
               onSelect={() => {
+                const defaults = buildActivityPurchaseOptions(relation.product);
                 setTriggerId(relation.id);
-                setTriggerOptions(buildActivityPurchaseOptions(relation.product));
+                setTriggerOptions(defaults);
+                setTriggerUnitOptions([defaults]);
                 setMessage("");
               }}
             />
@@ -476,6 +567,24 @@ export default function PromotionalActivitySelector({
               <button type="button" disabled={!interactive} onClick={() => setQuantity((value) => Math.max(minimumTriggerQuantity, value - 1))} className="h-11 w-11 touch-manipulation text-xl font-black disabled:text-slate-300">−</button>
               <div className="grid h-11 min-w-14 place-items-center border-x font-black">{quantity}</div>
               <button type="button" disabled={!interactive} onClick={() => setQuantity((value) => Math.min(99, value + 1))} className="h-11 w-11 touch-manipulation text-xl font-black disabled:text-slate-300">＋</button>
+            </div>
+          </div>
+        )}
+
+        {buyGet && trigger && quantity > 1 && hasActivityPurchaseChoices(trigger.product) && (
+          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+            <div className="font-black text-emerald-800">每件主商品可選不同規格</div>
+            <div className="mt-1 text-sm text-emerald-700">例如：8格 × 1、12格 × 1，可以同時加入同一組活動。</div>
+            <div className="mt-3 space-y-2">
+              {triggerUnitOptions.slice(0, quantity).map((options, index) => (
+                <div key={`trigger-unit-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-black">第 {index + 1} 件</div>
+                    <div className="mt-1 text-sm font-bold text-slate-600">{getActivityPurchaseSummary(trigger.product, options)}</div>
+                  </div>
+                  <button type="button" onClick={() => setConfigureTarget({ role: "trigger", relation: trigger, index })} className="shrink-0 rounded-xl border border-emerald-600 px-3 py-2 text-sm font-black text-emerald-700">修改規格</button>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -527,16 +636,18 @@ export default function PromotionalActivitySelector({
                 <ProductChoiceCard
                   key={relation.id}
                   relation={relation}
-                  onConfigure={() => setConfigureTarget({ role: "benefit", relation })}
+                  onConfigure={() => setConfigureTarget({ role: "benefit", relation, index: buyGet ? 0 : undefined })}
                   selected={benefitId === relation.id}
-                  selectedOptions={benefitId === relation.id ? benefitOptions : undefined}
+                  selectedOptions={benefitId === relation.id ? (buyGet ? benefitUnitOptions[0] ?? benefitOptions : benefitOptions) : undefined}
                   compact
                   label={buyGet ? "免費贈品" : "優惠加購"}
                   priceLabel={buyGet ? "免費" : `加購價 NT$${currency.format(relation.activityProductPrice ?? activity.discountValue ?? 0)}`}
                   disabled={!interactive}
                   onSelect={() => {
+                    const defaults = buildActivityPurchaseOptions(relation.product);
                     setBenefitId(relation.id);
-                    setBenefitOptions(buildActivityPurchaseOptions(relation.product));
+                    setBenefitOptions(defaults);
+                    setBenefitUnitOptions([defaults]);
                     setMessage("");
                   }}
                 />
@@ -584,6 +695,23 @@ export default function PromotionalActivitySelector({
                 )}
               </div>
             )}
+
+            {buyGet && benefit && benefitQuantity > 1 && hasActivityPurchaseChoices(benefit.product) && (
+              <div className="mt-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4">
+                <div className="font-black text-rose-700">每個贈品也可以選不同規格</div>
+                <div className="mt-3 space-y-2">
+                  {benefitUnitOptions.slice(0, benefitQuantity).map((options, index) => (
+                    <div key={`benefit-unit-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-black">第 {index + 1} 個贈品</div>
+                        <div className="mt-1 text-sm font-bold text-slate-600">{getActivityPurchaseSummary(benefit.product, options)}</div>
+                      </div>
+                      <button type="button" onClick={() => setConfigureTarget({ role: "benefit", relation: benefit, index })} className="shrink-0 rounded-xl border border-rose-500 px-3 py-2 text-sm font-black text-rose-600">修改規格</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -603,9 +731,11 @@ export default function PromotionalActivitySelector({
             <div>
               <div className="text-sm text-slate-500">主商品</div>
               <div className="font-black">{trigger?.product.name ?? "尚未選擇"} {trigger ? `× ${quantity}` : ""}</div>
-              {trigger && <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(trigger.product, triggerOptions)}</div>}
+              {trigger && (buyGet && quantity > 1
+                ? <div className="mt-1 space-y-1 text-sm font-bold leading-6 text-slate-600">{triggerUnitOptions.slice(0, quantity).map((options, index) => <div key={`summary-main-${index}`}>第{index + 1}件：{getActivityPurchaseSummary(trigger.product, options)}</div>)}</div>
+                : <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(trigger.product, triggerOptions)}</div>)}
             </div>
-            <div className="font-black">NT${currency.format(triggerPrice * quantity)}</div>
+            <div className="font-black">NT${currency.format(buyGetTriggerTotal)}</div>
           </div>
           <div className="flex items-center justify-between gap-4 py-4">
             <div>
@@ -617,7 +747,9 @@ export default function PromotionalActivitySelector({
                     ? "尚未選擇"
                     : "不加購"}
               </div>
-              {shouldIncludeBenefit && benefit && <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(benefit.product, benefitOptions)}</div>}
+              {shouldIncludeBenefit && benefit && (buyGet && benefitQuantity > 1
+                ? <div className="mt-1 space-y-1 text-sm font-bold leading-6 text-slate-600">{benefitUnitOptions.slice(0, benefitQuantity).map((options, index) => <div key={`summary-benefit-${index}`}>第{index + 1}個：{getActivityPurchaseSummary(benefit.product, options)}</div>)}</div>
+                : <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(benefit.product, benefitOptions)}</div>)}
             </div>
             <div className={`font-black ${buyGet && benefit ? "text-rose-600" : ""}`}>
               {buyGet && benefit

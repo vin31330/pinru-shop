@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import SectionHeading from "@/components/SectionHeading";
+import { categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
 import { ProductCategory } from "@/types/product";
 
 type FallbackKind = "bottle" | "lunchbox" | "cleaning" | "utensils" | "care" | "pan" | "basket" | "knife" | "box";
@@ -56,7 +57,7 @@ export default function CategorySection({
   showHeading = true,
   className = "",
   sectionId = "商品分類",
-  viewAllHref = "/products",
+  viewAllHref = FRIENDLY_PATHS.allProducts,
 }: {
   categories: ProductCategory[];
   showHeading?: boolean;
@@ -76,7 +77,7 @@ export default function CategorySection({
         {categories.map((category) => (
           <Link
             key={category.id}
-            href={category.href || `/products?category=${encodeURIComponent(category.id)}`}
+            href={category.href || categoryPath(category.id, category.name)}
             className="category-tile group"
           >
             <span className="category-tile-icon" aria-hidden="true">

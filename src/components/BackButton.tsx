@@ -92,7 +92,7 @@ export function FloatingBackButton({
       <BackButton
         fallbackHref={fallbackHref}
         label={label}
-        className="pointer-events-auto fixed left-3 top-[5.25rem] z-[45]"
+        className="pointer-events-auto fixed left-3 top-[calc(5.25rem+var(--global-ticker-height,0px))] z-[45]"
       />
     </div>
   );

@@ -1,29 +1,30 @@
 import Link from "next/link";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 
 const shortcuts = [
   {
-    href: "/activities",
+    href: FRIENDLY_PATHS.activities,
     title: "優惠活動",
     subtitle: "超值優惠・限時搶購",
     icon: "🎁",
     className: "shortcut-card--activity",
   },
   {
-    href: "/products?section=hot",
+    href: FRIENDLY_PATHS.hotProducts,
     title: "熱銷商品",
     subtitle: "人氣熱銷・必買推薦",
     icon: "🔥",
     className: "shortcut-card--hot",
   },
   {
-    href: "/products?section=new",
+    href: FRIENDLY_PATHS.newProducts,
     title: "新品推薦",
     subtitle: "新品上架・最新精選",
     icon: "NEW",
     className: "shortcut-card--new",
   },
   {
-    href: "/products",
+    href: FRIENDLY_PATHS.categories,
     title: "商品分類",
     subtitle: "全部分類・快速選購",
     icon: "grid",

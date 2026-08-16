@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPublishedActivities } from "@/lib/activities";
 import { reconcileCart } from "@/lib/cart";
 import { getPublishedProducts } from "@/lib/products";
+import { validateCoupon } from "@/lib/coupons";
 import type { CartItem } from "@/types/product";
 
 export const dynamic = "force-dynamic";
@@ -114,13 +115,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const serverTotal = checkedItems.reduce(
+    const serverSubtotal = checkedItems.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
       0,
     );
+    const couponCode = text(rawBody.couponCode, 120).toUpperCase();
+    let couponResult = null as Awaited<ReturnType<typeof validateCoupon>> | null;
+    let serverTotal = serverSubtotal;
+    if (couponCode) {
+      couponResult = await validateCoupon(couponCode, checkedItems, products);
+      if (!couponResult.ok) {
+        return errorResponse(couponResult.message || "優惠碼目前無法使用。", 409);
+      }
+      serverTotal = Number(couponResult.finalTotal ?? serverSubtotal);
+    }
+
     const clientTotal = Number(rawBody.totalAmount);
     if (!Number.isFinite(clientTotal) || Math.abs(clientTotal - serverTotal) > 0.5) {
-      return errorResponse("商品價格已更新，請返回購物車確認最新金額後再送出。", 409);
+      return errorResponse("商品價格或優惠已更新，請返回購物車確認最新金額後再送出。", 409);
     }
 
     // Apps Script 的 doPost(e) 從網址參數 e.parameter.action 讀取路由。
@@ -131,6 +143,16 @@ export async function POST(request: NextRequest) {
       clientRequestId,
       customer: customerResult.customer,
       items: checkedItems,
+      couponCode,
+      coupon: couponResult?.ok && couponResult.coupon ? {
+        id: couponResult.coupon.id,
+        code: couponResult.coupon.code,
+        name: couponResult.coupon.name,
+        description: couponResult.coupon.description || "",
+        discountAmount: Number(couponResult.discountAmount || 0),
+        eligibleSubtotal: Number(couponResult.eligibleSubtotal || 0),
+      } : null,
+      subtotalAmount: serverSubtotal,
       totalAmount: serverTotal,
       lineMessage: text(rawBody.lineMessage, 20000),
       submittedAt: text(rawBody.submittedAt, 80),

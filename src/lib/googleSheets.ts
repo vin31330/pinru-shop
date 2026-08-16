@@ -104,6 +104,9 @@ export async function readSheet(
     "首頁項目ID",
     "分類ID",
     "設定鍵",
+    "優惠碼ID",
+    "優惠碼商品ID",
+    "優惠碼分類ID",
   ];
 
   const headerIndex = rows.findIndex((row) =>

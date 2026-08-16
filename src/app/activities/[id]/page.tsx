@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import ProductImage from "@/components/ProductImage";
 import { getActivityById } from "@/lib/activities";
 import { getActivityPriceText, isMixMatchActivity, isQuantityDiscountActivity } from "@/lib/activityPresentation";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-TW", {
   year: "numeric",
@@ -30,8 +31,8 @@ export default async function ActivityDetailPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <Header showBackButton backFallbackHref="/activities" />
-      <FloatingBackButton fallbackHref="/activities" />
+      <Header showBackButton backFallbackHref={FRIENDLY_PATHS.activities} />
+      <FloatingBackButton fallbackHref={FRIENDLY_PATHS.activities} />
       <div className="mx-auto max-w-5xl px-4 py-7">
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm">
           <div className="mx-auto max-w-3xl px-4 pt-4 sm:px-6 sm:pt-6">
@@ -63,7 +64,7 @@ export default async function ActivityDetailPage({
                   ～
                   {activity.endDate
                     ? dateFormatter.format(new Date(activity.endDate))
-                    : "另行通知"}
+                    : "數量有限 售完為止"}
                 </span>
               )}
             </div>

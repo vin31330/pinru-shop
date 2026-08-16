@@ -7,6 +7,7 @@ import HomeShortcutNav from "@/components/HomeShortcutNav";
 import ProductSection from "@/components/ProductSection";
 import SectionHeading from "@/components/SectionHeading";
 import { getPublishedActivities } from "@/lib/activities";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 import { getPublishedCategories } from "@/lib/categories";
 import { displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedBanners } from "@/lib/banners";
@@ -66,7 +67,7 @@ export default async function Home() {
 
         {homeActivities.length > 0 && (
           <section id="優惠活動" className="home-section scroll-mt-32">
-            <SectionHeading title="優惠活動" href="/activities" />
+            <SectionHeading title="優惠活動" href={FRIENDLY_PATHS.activities} />
             <div className="home-activity-grid grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
               {homeActivities.slice(0, settings.homeActivityCount).map((activity) => (
                 <ActivityCard key={activity.id} activity={activity} />
@@ -88,7 +89,7 @@ export default async function Home() {
         />
         <CategorySection
           categories={categories.slice(0, settings.homeCategoryCount)}
-          viewAllHref="/products?view=all"
+          viewAllHref={FRIENDLY_PATHS.allProducts}
         />
       </div>
       <Footer />

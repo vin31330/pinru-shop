@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { FRIENDLY_PATHS } from "@/lib/paths";
 
 const homeButtonStyle: CSSProperties = {
   display: "inline-flex",
@@ -22,7 +23,7 @@ const homeButtonStyle: CSSProperties = {
 export function HomeButtonLink({ style }: { style?: CSSProperties }) {
   return (
     <Link
-      href="/"
+      href={FRIENDLY_PATHS.home}
       aria-label="回到首頁"
       style={{ ...homeButtonStyle, ...style }}
     >
@@ -52,7 +53,7 @@ export default function FloatingHomeButton() {
       <HomeButtonLink
         style={{
           position: "fixed",
-          top: "5.25rem",
+          top: "calc(5.25rem + var(--global-ticker-height, 0px))",
           left: "0.75rem",
           zIndex: 45,
           pointerEvents: "auto",

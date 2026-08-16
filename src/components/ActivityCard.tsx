@@ -5,14 +5,15 @@ import ProductImage from "@/components/ProductImage";
 import { Activity } from "@/types/activity";
 import { getActivityPriceText } from "@/lib/activityPresentation";
 import { rememberReturnPosition } from "@/lib/returnPosition";
+import { activityPath } from "@/lib/paths";
 
 export default function ActivityCard({ activity, href }: { activity: Activity; href?: string }) {
   return (
     <Link
-      href={href || `/activities/${encodeURIComponent(activity.id)}`}
+      href={href || activityPath(activity.id, activity.name)}
       onClick={() =>
         rememberReturnPosition(
-          href || `/activities/${encodeURIComponent(activity.id)}`,
+          href || activityPath(activity.id, activity.name),
         )
       }
       className="activity-card-v18 block overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"

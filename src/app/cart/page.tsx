@@ -23,7 +23,9 @@ import {
   saveCart,
 } from "@/lib/cart";
 import { Activity } from "@/types/activity";
+import { clearAppliedCoupon, loadAppliedCoupon, requestCouponValidation, saveAppliedCoupon, type AppliedCoupon } from "@/lib/couponClient";
 import { CartItem, Product } from "@/types/product";
+import { activityPath, FRIENDLY_PATHS, productPath } from "@/lib/paths";
 
 const currency = new Intl.NumberFormat("zh-TW");
 
@@ -128,7 +130,15 @@ function CartPageContent() {
   const [editing, setEditing] = useState<CartItem | null>(null);
   const [checking, setChecking] = useState(true);
   const [checkError, setCheckError] = useState("");
+  const [couponAvailable, setCouponAvailable] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponMessage, setCouponMessage] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponRevalidateCode, setCouponRevalidateCode] = useState("");
   const completedFocus = useRef("");
+  const couponValidationSequence = useRef(0);
+  const lastCouponCartFingerprint = useRef("");
   const pendingViewport = useRef<{
     targetFocus?: string;
     targetTop?: number;
@@ -136,6 +146,18 @@ function CartPageContent() {
   } | null>(null);
 
   useEffect(() => {
+    fetch("/api/coupons", { cache: "no-store" })
+      .then((response) => response.json() as Promise<{ available?: boolean }>)
+      .then((result) => setCouponAvailable(Boolean(result.available)))
+      .catch(() => setCouponAvailable(false));
+
+    const savedCoupon = loadAppliedCoupon();
+    if (savedCoupon) {
+      setAppliedCoupon(savedCoupon);
+      setCouponCode(savedCoupon.code);
+      setCouponRevalidateCode(savedCoupon.code);
+    }
+
     const current = loadCart();
     setItems(current);
     Promise.all([
@@ -236,6 +258,116 @@ function CartPageContent() {
     () => validItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     [validItems],
   );
+  const cartCouponFingerprint = useMemo(
+    () => JSON.stringify(
+      items.map((item) => ({
+        cartId: item.cartId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        validationStatus: item.validationStatus || "",
+        selectedOptions: item.selectedOptions,
+        activityId: item.activityId || "",
+        activitySelections: item.activitySelections || [],
+      })),
+    ),
+    [items],
+  );
+  const payableAmount = Math.max(0, totalAmount - (appliedCoupon?.discountAmount || 0));
+
+  useEffect(() => {
+    const codeToRevalidate = appliedCoupon?.code || couponRevalidateCode;
+    if (checking || !codeToRevalidate) return;
+
+    const validationSequence = ++couponValidationSequence.current;
+    const previousFingerprint = lastCouponCartFingerprint.current;
+    const cartChanged = Boolean(previousFingerprint && previousFingerprint !== cartCouponFingerprint);
+
+    requestCouponValidation(codeToRevalidate, validItems)
+      .then((result) => {
+        if (validationSequence !== couponValidationSequence.current) return;
+        lastCouponCartFingerprint.current = cartCouponFingerprint;
+
+        if (result.ok && result.coupon) {
+          saveAppliedCoupon(result);
+          setAppliedCoupon({
+            code: result.coupon.code,
+            id: result.coupon.id,
+            name: result.coupon.name,
+            description: result.coupon.description || "",
+            discountAmount: Number(result.discountAmount || 0),
+            finalTotal: Number(result.finalTotal || 0),
+            eligibleSubtotal: Number(result.eligibleSubtotal || 0),
+          });
+          setCouponRevalidateCode(result.coupon.code);
+          if (cartChanged) setCouponMessage("購物車已更新，優惠碼已重新驗證。");
+          else setCouponMessage("");
+        } else {
+          clearAppliedCoupon();
+          setAppliedCoupon(null);
+          setCouponMessage(`${result.message} 優惠碼已暫停套用；購物車再次符合條件時會自動恢復。`);
+        }
+      })
+      .catch(() => {
+        if (validationSequence !== couponValidationSequence.current) return;
+        setCouponMessage("目前無法重新驗證優惠碼，請稍後再試。");
+      });
+  }, [checking, cartCouponFingerprint, couponRevalidateCode, appliedCoupon?.code]);
+
+  async function applyCoupon() {
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponMessage("請輸入優惠碼。");
+      return;
+    }
+    setCouponChecking(true);
+    setCouponMessage("");
+    try {
+      const result = await requestCouponValidation(code, validItems);
+      if (!result.ok || !result.coupon) {
+        // 只要優惠碼本身存在、只是目前購物車尚未符合條件，
+        // 就記住這組代碼。之後商品數量、規格或內容改變時會自動重新驗證，
+        // 客人不需要再次按「套用優惠」。
+        if (result.coupon?.code) {
+          setCouponCode(result.coupon.code);
+          setCouponRevalidateCode(result.coupon.code);
+          lastCouponCartFingerprint.current = cartCouponFingerprint;
+        } else {
+          setCouponRevalidateCode("");
+        }
+        setCouponMessage(result.message || "此優惠碼目前無法使用。");
+        return;
+      }
+      saveAppliedCoupon(result);
+      setCouponCode(result.coupon.code);
+      setCouponRevalidateCode(result.coupon.code);
+      lastCouponCartFingerprint.current = cartCouponFingerprint;
+      setAppliedCoupon({
+        code: result.coupon.code,
+        id: result.coupon.id,
+        name: result.coupon.name,
+        description: result.coupon.description || "",
+        discountAmount: Number(result.discountAmount || 0),
+        finalTotal: Number(result.finalTotal || 0),
+        eligibleSubtotal: Number(result.eligibleSubtotal || 0),
+      });
+      setCouponMessage("優惠碼已成功套用。");
+    } catch {
+      setCouponMessage("目前無法確認優惠碼，請稍後再試。");
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  function removeCoupon() {
+    couponValidationSequence.current += 1;
+    lastCouponCartFingerprint.current = "";
+    clearAppliedCoupon();
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponRevalidateCode("");
+    setCouponMessage("優惠碼已移除。");
+  }
 
   function findCartElement(cartFocus: string) {
     return Array.from(
@@ -348,8 +480,8 @@ function CartPageContent() {
           <Link
             href={
               item.itemType === "activity" && item.activityId
-                ? `/activities/${encodeURIComponent(item.activityId)}`
-                : `/products/${encodeURIComponent(item.productId)}`
+                ? activityPath(item.activityId, item.name)
+                : productPath(item.productId, item.name)
             }
             aria-label={`查看${item.name}`}
             className="shrink-0"
@@ -359,7 +491,7 @@ function CartPageContent() {
           <div className="min-w-0 flex-1">
             <h2 className="font-black">
               <Link
-                href={item.itemType === "activity" && item.activityId ? `/activities/${encodeURIComponent(item.activityId)}` : `/products/${encodeURIComponent(item.productId)}`}
+                href={item.itemType === "activity" && item.activityId ? activityPath(item.activityId, item.name) : productPath(item.productId, item.name)}
                 className="transition hover:text-emerald-700 hover:underline"
               >
                 {item.name}
@@ -465,7 +597,7 @@ function CartPageContent() {
               )}
               {item.itemType === "activity" && item.activityId ? (
                 <Link
-                  href={`/activities/${encodeURIComponent(item.activityId)}?edit=${encodeURIComponent(item.cartId)}`}
+                  href={`${activityPath(item.activityId, item.selectedOptions["活動名稱"] || item.name)}?edit=${encodeURIComponent(item.cartId)}`}
                   onClick={rememberCartEditReturn}
                   className="min-h-12 rounded-xl border border-emerald-600 px-4 py-3 text-center font-black text-emerald-700"
                 >
@@ -492,7 +624,7 @@ function CartPageContent() {
     <main className="min-h-screen bg-slate-50">
       <Header />
       <div className="mx-auto max-w-4xl px-4 py-7">
-        <BackButton fallbackHref="/products" />
+        <BackButton fallbackHref={FRIENDLY_PATHS.allProducts} />
         <div className="mt-5 flex items-center justify-between gap-4">
           <h1 className="text-2xl font-black">購物車</h1>
           {items.length > 0 && (
@@ -517,7 +649,7 @@ function CartPageContent() {
         {items.length === 0 ? (
           <div className="mt-6 rounded-3xl bg-white p-10 text-center">
             購物車目前是空的
-            <div><Link href="/products" className="mt-5 inline-block rounded-2xl bg-emerald-600 px-5 py-3 font-bold text-white">前往選購</Link></div>
+            <div><Link href={FRIENDLY_PATHS.allProducts} className="mt-5 inline-block rounded-2xl bg-emerald-600 px-5 py-3 font-bold text-white">前往選購</Link></div>
           </div>
         ) : (
           <>
@@ -562,7 +694,7 @@ function CartPageContent() {
                         </div>
                         {group.selectionId && group.activityId && (
                           <Link
-                            href={`/activities/${encodeURIComponent(group.activityId)}?edit=${encodeURIComponent(group.selectionId)}`}
+                            href={`${activityPath(group.activityId, group.activityName || "優惠活動")}?edit=${encodeURIComponent(group.selectionId)}`}
                             onClick={rememberCartEditReturn}
                             className="min-h-11 rounded-xl border border-emerald-600 bg-white px-3 py-2.5 text-sm font-black text-emerald-700"
                           >
@@ -588,7 +720,7 @@ function CartPageContent() {
                           <div className="mt-1 text-sm font-bold text-amber-700">尚未選擇優惠加購商品，可回活動頁補選。</div>
                         </div>
                         <Link
-                          href={`/activities/${encodeURIComponent(group.activityId)}`}
+                          href={activityPath(group.activityId, group.activityName || "優惠活動")}
                           className="rounded-xl bg-amber-600 px-4 py-2 font-black text-white"
                         >
                           回活動頁選擇加購品
@@ -602,13 +734,61 @@ function CartPageContent() {
 
             <div className="mt-6 rounded-3xl border bg-white p-5 shadow-sm" data-cart-summary>
               <div className="flex justify-between"><span>商品總件數</span><span className="font-bold" data-cart-count={totalCount}>{totalCount} 件</span></div>
-              <div className="mt-3 flex justify-between text-xl font-black"><span>商品總金額</span><span className="text-rose-600" data-cart-total={totalAmount}>NT${currency.format(totalAmount)}</span></div>
+              <div className="mt-3 flex justify-between font-bold"><span>商品／活動後小計</span><span data-cart-total={totalAmount}>NT${currency.format(totalAmount)}</span></div>
+
+              {couponAvailable && (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+                  <div className="font-black text-slate-900">有優惠碼嗎？</div>
+                  {!appliedCoupon ? (
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        value={couponCode}
+                        onChange={(event) => { setCouponCode(event.target.value); setCouponMessage(""); }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") { event.preventDefault(); void applyCoupon(); }
+                        }}
+                        autoCapitalize="characters"
+                        placeholder="請輸入優惠碼"
+                        className="h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-base font-bold uppercase outline-none focus:border-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        disabled={couponChecking}
+                        onClick={() => void applyCoupon()}
+                        className="h-12 rounded-xl bg-emerald-600 px-5 font-black text-white disabled:opacity-50"
+                      >
+                        {couponChecking ? "確認中…" : "套用優惠"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-xl bg-white p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-black text-emerald-700">✓ {appliedCoupon.code} 已套用</div>
+                          <div className="mt-1 font-bold">{appliedCoupon.name}</div>
+                          {appliedCoupon.description && <div className="mt-1 text-sm text-slate-600">{appliedCoupon.description}</div>}
+                        </div>
+                        <button type="button" onClick={removeCoupon} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-black text-slate-600">移除優惠碼</button>
+                      </div>
+                    </div>
+                  )}
+                  {couponMessage && <div className={`mt-2 text-sm font-bold ${appliedCoupon ? "text-emerald-700" : "text-amber-700"}`}>{couponMessage}</div>}
+                </div>
+              )}
+
+              {appliedCoupon && (
+                <div className="mt-4 flex justify-between font-black text-emerald-700">
+                  <span>優惠碼折抵</span>
+                  <span>-NT${currency.format(appliedCoupon.discountAmount)}</span>
+                </div>
+              )}
+              <div className="mt-3 flex justify-between text-xl font-black"><span>應付金額</span><span className="text-rose-600">NT${currency.format(payableAmount)}</span></div>
               {invalidCount > 0 || checking || checkError ? (
                 <div className="mt-5 rounded-2xl bg-slate-200 px-5 py-4 text-center font-black text-slate-500">請先處理失效商品並完成最新資料確認</div>
               ) : (
                 <Link href="/order" className="mt-5 block rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg font-black text-white">前往填寫訂單</Link>
               )}
-              <Link href="/products" className="mt-3 block rounded-2xl border border-emerald-600 px-5 py-3.5 text-center font-black text-emerald-700">
+              <Link href={FRIENDLY_PATHS.allProducts} className="mt-3 block rounded-2xl border border-emerald-600 px-5 py-3.5 text-center font-black text-emerald-700">
                 繼續選購商品
               </Link>
             </div>
