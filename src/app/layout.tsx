@@ -4,9 +4,10 @@ import GoogleAnalytics from "@/components/GoogleAnalytics";
 import GlobalTicker from "@/components/GlobalTicker";
 import "./globals.css";
 
-const siteName = "世界好用 小新和品儒";
-const siteDescription =
-  "世界好用 小新和品儒｜鍋具、五金、生活百貨，市場精選商品，提供多元商品與優惠活動，線上快速下單。";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/shareMetadata";
+
+const siteName = SITE_NAME;
+const siteDescription = SITE_DESCRIPTION;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://pinru-shop.netlify.app"),

@@ -16,8 +16,27 @@ function sendNewOrderEmail_(payload, orderInfo) {
     const totalAmount = Number(orderInfo && orderInfo.totalAmount) || 0;
 
     const detail = items.map(function (item, index) {
-      return (index + 1) + ". " + (item.name || "商品") + " × " + (Number(item.quantity) || 1);
-    }).join("\n");
+      const options = item && item.selectedOptions ? Object.keys(item.selectedOptions)
+        .filter(function (key) { return key !== "活動選擇識別"; })
+        .map(function (key) { return key + "：" + item.selectedOptions[key]; })
+        .join("、") : "";
+
+      const activitySelections = item && Array.isArray(item.activitySelections)
+        ? item.activitySelections.map(function (selection, selectionIndex) {
+            const selectionOptions = selection && selection.selectedOptions ? Object.keys(selection.selectedOptions)
+              .map(function (key) { return key + "：" + selection.selectedOptions[key]; })
+              .join("、") : "";
+            return "   第" + (selectionIndex + 1) + "件：" + (selection.productName || "商品") + (selectionOptions ? "（" + selectionOptions + "）" : "");
+          }).join("\n")
+        : "";
+
+      return [
+        (index + 1) + ". " + (item.name || "商品") + " × " + (Number(item.quantity) || 1),
+        options ? "   規格：" + options : "",
+        activitySelections,
+        "   小計：NT$" + formatEmailAmount_((Number(item.unitPrice) || 0) * (Number(item.quantity) || 1)),
+      ].filter(String).join("\n");
+    }).join("\n\n");
 
     const subject = "【新訂單】" + orderNumber;
     const body = [
@@ -33,6 +52,7 @@ function sendNewOrderEmail_(payload, orderInfo) {
       "",
       "總金額：NT$" + formatEmailAmount_(totalAmount),
       customer.note ? "備註：" + customer.note : "",
+      payload && payload.couponCode ? "優惠碼：" + payload.couponCode : "",
     ].filter(String).join("\n");
 
     MailApp.sendEmail(email, subject, body);

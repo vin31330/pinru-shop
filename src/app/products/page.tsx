@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import CategorySection from "@/components/CategorySection";
 import FloatingHomeButton from "@/components/FloatingHomeButton";
@@ -11,8 +12,75 @@ import { categoryNameAliases, displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
+import { absoluteShareImage, DEFAULT_SHARE_IMAGE, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  searchParams,
+}: ProductsPageProps): Promise<Metadata> {
+  const raw = await searchParams;
+  const q = decodeRouteValue(raw.q ?? "");
+  const category = decodeRouteValue(raw.category ?? "");
+  const section = decodeRouteValue(raw.section ?? "");
+  const view = decodeRouteValue(raw.view ?? "");
+
+  const [products, categories] = await Promise.all([
+    getPublishedProducts(),
+    getPublishedCategories(),
+  ]);
+
+  const selectedCategory = categories.find(
+    (item) => item.id === category || item.name === category || categoryNameAliases(item.name).includes(category),
+  );
+
+  let title = "全部商品";
+  let description = "瀏覽世界好用 小新和品儒的商品。";
+  let shareImage = DEFAULT_SHARE_IMAGE;
+
+  if (section === "hot") {
+    const firstHot = [...products]
+      .filter((product) => product.featured)
+      .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999))[0];
+    title = "熱銷商品";
+    description = "看看大家喜歡的熱銷商品，方便快速挑選。";
+    shareImage = firstHot?.mainImage || DEFAULT_SHARE_IMAGE;
+  } else if (section === "new") {
+    const firstNew = products.find((product) => product.isNew);
+    title = "新品推薦";
+    description = "看看最近加入的新品推薦，挑選最新商品。";
+    shareImage = firstNew?.mainImage || DEFAULT_SHARE_IMAGE;
+  } else if (category) {
+    title = selectedCategory?.name || displayCategoryName(category);
+    description = `瀏覽「${title}」分類商品。`;
+  } else if (view === "all" || !q) {
+    title = "全部商品";
+    description = "瀏覽全部商品，慢慢挑選適合您的商品。";
+  } else {
+    title = `搜尋「${q}」`;
+    description = `搜尋「${q}」的商品結果。`;
+  }
+
+  return {
+    title,
+    description: cleanDescription(description),
+    openGraph: {
+      type: "website",
+      locale: "zh_TW",
+      url: "https://pinru-shop.netlify.app",
+      siteName: SITE_NAME,
+      title,
+      description: cleanDescription(description),
+      images: [{ url: absoluteShareImage(shareImage), width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: cleanDescription(description),
+      images: [absoluteShareImage(shareImage)],
+    },
+  };
+}
 
 type ProductsPageProps = {
   searchParams: Promise<{

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ActivitySelector from "@/components/ActivitySelector";
 import { FloatingBackButton } from "@/components/BackButton";
@@ -9,6 +10,7 @@ import ProductImage from "@/components/ProductImage";
 import { getActivityById } from "@/lib/activities";
 import { getActivityPriceText, isMixMatchActivity, isQuantityDiscountActivity } from "@/lib/activityPresentation";
 import { FRIENDLY_PATHS } from "@/lib/paths";
+import { absoluteShareImage, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-TW", {
   year: "numeric",
@@ -17,6 +19,37 @@ const dateFormatter = new Intl.DateTimeFormat("zh-TW", {
 });
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const activity = await getActivityById(decodeURIComponent(id));
+  if (!activity) return {};
+
+  const title = activity.name;
+  const description = cleanDescription(activity.subtitle || activity.description, `${activity.name}｜優惠活動`);
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      locale: "zh_TW",
+      url: `https://pinru-shop.netlify.app/activities/${encodeURIComponent(activity.id)}/${encodeURIComponent(activity.name)}`,
+      siteName: SITE_NAME,
+      title,
+      description,
+      images: [{ url: absoluteShareImage(activity.imageUrl), width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [absoluteShareImage(activity.imageUrl)],
+    },
+  };
+}
 
 export default async function ActivityDetailPage({
   params,

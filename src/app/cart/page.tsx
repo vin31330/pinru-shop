@@ -578,7 +578,7 @@ function CartPageContent() {
                     >
                       −
                     </button>
-                    <div className="grid h-12 min-w-14 place-items-center border-x text-lg font-black">{item.quantity}</div>
+                    <div className="grid h-12 min-w-14 place-items-center border-x text-lg md:text-lg font-black">{item.quantity}</div>
                     <button
                       type="button"
                       aria-label={`增加${item.name}數量`}
@@ -684,7 +684,7 @@ function CartPageContent() {
                     <div className="flex flex-wrap items-center justify-between gap-3 bg-emerald-50 px-5 py-4">
                       <div>
                         <div className="text-sm font-black text-emerald-700">{activityTypeLabel(group.activityType)}</div>
-                        <h2 className="mt-1 text-lg font-black text-slate-900">{group.activityName || "優惠活動組合"}</h2>
+                        <h2 className="mt-1 text-lg md:text-lg font-black text-slate-900">{group.activityName || "優惠活動組合"}</h2>
                         <div className="mt-1 text-sm font-bold text-slate-500">以下商品屬於同一組活動，會一起享有優惠</div>
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
@@ -738,7 +738,7 @@ function CartPageContent() {
 
               {couponAvailable && (
                 <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-                  <div className="font-black text-slate-900">有優惠碼嗎？</div>
+                  <div className="text-lg md:text-lg font-black text-slate-900 sm:text-base">有優惠碼嗎？</div>
                   {!appliedCoupon ? (
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <input
@@ -749,13 +749,13 @@ function CartPageContent() {
                         }}
                         autoCapitalize="characters"
                         placeholder="請輸入優惠碼"
-                        className="h-12 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-base font-bold uppercase outline-none focus:border-emerald-600"
+                        className="h-14 w-full min-w-0 rounded-xl border-2 border-slate-300 bg-white px-4 text-lg font-black uppercase outline-none placeholder:text-slate-400 focus:border-emerald-600 sm:h-12 sm:flex-1 sm:w-auto sm:border sm:px-3 sm:text-base"
                       />
                       <button
                         type="button"
                         disabled={couponChecking}
                         onClick={() => void applyCoupon()}
-                        className="h-12 rounded-xl bg-emerald-600 px-5 font-black text-white disabled:opacity-50"
+                        className="h-14 w-full rounded-xl bg-emerald-600 px-5 text-lg font-black text-white disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
                       >
                         {couponChecking ? "確認中…" : "套用優惠"}
                       </button>
@@ -772,7 +772,7 @@ function CartPageContent() {
                       </div>
                     </div>
                   )}
-                  {couponMessage && <div className={`mt-2 text-sm font-bold ${appliedCoupon ? "text-emerald-700" : "text-amber-700"}`}>{couponMessage}</div>}
+                  {couponMessage && <div className={`mt-2 text-base font-black ${appliedCoupon ? "text-emerald-700" : "text-amber-700"}`}>{couponMessage}</div>}
                 </div>
               )}
 
@@ -786,7 +786,7 @@ function CartPageContent() {
               {invalidCount > 0 || checking || checkError ? (
                 <div className="mt-5 rounded-2xl bg-slate-200 px-5 py-4 text-center font-black text-slate-500">請先處理失效商品並完成最新資料確認</div>
               ) : (
-                <Link href="/order" className="mt-5 block rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg font-black text-white">前往填寫訂單</Link>
+                <Link href="/order" className="mt-5 block rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg md:text-lg font-black text-white">前往填寫訂單</Link>
               )}
               <Link href={FRIENDLY_PATHS.allProducts} className="mt-3 block rounded-2xl border border-emerald-600 px-5 py-3.5 text-center font-black text-emerald-700">
                 繼續選購商品

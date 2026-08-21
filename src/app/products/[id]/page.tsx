@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import AddToCartPanel from "@/components/AddToCartPanel";
 import ActivityProductConfigurator from "@/components/ActivityProductConfigurator";
@@ -9,8 +10,41 @@ import RichProductDescription from "@/components/RichProductDescription";
 import { getProductById } from "@/lib/products";
 import { FRIENDLY_PATHS } from "@/lib/paths";
 import { getActivityById } from "@/lib/activities";
+import { absoluteShareImage, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getProductById(decodeURIComponent(id));
+  if (!product) return {};
+
+  const title = product.name;
+  const description = cleanDescription(product.subtitle || product.description, `${product.name}｜世界好用 小新和品儒`);
+  const image = product.mainImage || product.media.find((item) => item.type === "image")?.url;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      locale: "zh_TW",
+      url: `https://pinru-shop.netlify.app/products/${encodeURIComponent(product.id)}/${encodeURIComponent(product.name)}`,
+      siteName: SITE_NAME,
+      title,
+      description,
+      images: [{ url: absoluteShareImage(image), width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [absoluteShareImage(image)],
+    },
+  };
+}
 
 type ProductPageProps = {
   params: Promise<{ id: string }>;

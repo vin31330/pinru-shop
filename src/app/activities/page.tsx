@@ -1,10 +1,40 @@
+import type { Metadata } from "next";
 import ActivityCard from "@/components/ActivityCard";
 import FloatingHomeButton from "@/components/FloatingHomeButton";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { getPublishedActivities } from "@/lib/activities";
+import { absoluteShareImage, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const activities = await getPublishedActivities({ includeUpcoming: true });
+  const firstActivity = activities[0];
+  const title = "優惠活動";
+  const description = "看看目前的優惠活動，挑選適合您的活動組合。";
+  const image = firstActivity?.imageUrl;
+
+  return {
+    title,
+    description: cleanDescription(description),
+    openGraph: {
+      type: "website",
+      locale: "zh_TW",
+      url: "https://pinru-shop.netlify.app/activities/all/優惠活動",
+      siteName: SITE_NAME,
+      title,
+      description,
+      images: [{ url: absoluteShareImage(image), width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [absoluteShareImage(image)],
+    },
+  };
+}
 
 export default async function ActivitiesPage() {
   const activities = await getPublishedActivities({ includeUpcoming: true });

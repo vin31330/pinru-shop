@@ -453,7 +453,7 @@ export default function OrderPage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          <button type="submit" disabled={items.length === 0 || checking || submitting || Boolean(validationError)} className="w-full rounded-2xl bg-[#06C755] px-5 py-4 text-lg font-black text-white disabled:opacity-50">
+          <button type="submit" disabled={items.length === 0 || checking || submitting || Boolean(validationError)} className="w-full rounded-2xl bg-[#06C755] px-5 py-4 text-lg md:text-lg font-black text-white disabled:opacity-50">
             {submitting ? "正在寫入訂單……" : "送出訂單"}
           </button>
           <p className="text-center text-sm text-slate-500">訂單建立成功後，可在完成頁一鍵前往 LINE 通知店家。</p>
