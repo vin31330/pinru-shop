@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale: "zh_TW",
-      url: "https://pinru-shop.netlify.app/activities/all/優惠活動",
+      url: "https://pinru-shop.netlify.app/activities",
       siteName: SITE_NAME,
       title,
       description,

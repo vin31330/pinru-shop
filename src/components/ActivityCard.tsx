@@ -25,7 +25,9 @@ export default function ActivityCard({ activity, href }: { activity: Activity; h
         className="aspect-square w-full sm:aspect-[16/7]"
       />
       <div className="min-w-0 flex-1 p-5">
-        <div className="text-sm font-black text-rose-600">限時活動</div>
+        <div className="text-sm font-black text-rose-600">
+          {activity.exclusiveProducts ? "活動限定優惠" : "限時活動"}
+        </div>
         <h3 className="mt-1 line-clamp-2 text-xl font-black leading-8">{activity.name}</h3>
         {activity.subtitle && <p className="mt-2 line-clamp-2 text-base leading-6 text-slate-600">{activity.subtitle}</p>}
         <div className="mt-4 flex items-center justify-between gap-3">

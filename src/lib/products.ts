@@ -100,6 +100,8 @@ async function buildPublishedProducts(): Promise<Product[]> {
     optionRows,
     pricingRows,
     pricingOptionRows,
+    activityRows,
+    activityProductRows,
     homepageEntries,
     settings,
   ] = await Promise.all([
@@ -108,9 +110,39 @@ async function buildPublishedProducts(): Promise<Product[]> {
     readSheet(SHEET_NAMES.options).catch(() => []),
     readSheet(SHEET_NAMES.pricingPlans).catch(() => []),
     readSheet(SHEET_NAMES.pricingPlanOptions).catch(() => []),
+    readSheet(SHEET_NAMES.activities).catch(() => []),
+    readSheet(SHEET_NAMES.activityProducts).catch(() => []),
     getHomepageProductEntries(),
     getSiteSettings(),
   ]);
+
+  const activeExclusiveActivities = new Map<string, { id: string; name: string }>();
+  const now = new Date();
+
+  for (const row of activityRows) {
+    if (isExplicitlyHidden(valueFrom(row, ["顯示狀態"]))) continue;
+    if (!toBoolean(valueFrom(row, ["活動限定商品", "活動期間僅顯示於活動"]))) continue;
+
+    const id = valueFrom(row, ["活動ID"]);
+    const name = valueFrom(row, ["活動名稱"]);
+    if (!id || !name) continue;
+
+    const start = parseSheetDate(valueFrom(row, ["活動開始日期"]));
+    const end = parseSheetDate(valueFrom(row, ["活動結束日期"]), true);
+    if ((start && now < start) || (end && now > end)) continue;
+
+    activeExclusiveActivities.set(id, { id, name });
+  }
+
+  const exclusiveActivityByProduct = new Map<string, { id: string; name: string }>();
+
+  for (const row of activityProductRows) {
+    if (isExplicitlyHidden(valueFrom(row, ["顯示狀態"]))) continue;
+    const activity = activeExclusiveActivities.get(valueFrom(row, ["活動ID"]));
+    const productId = valueFrom(row, ["商品ID"]);
+    if (!activity || !productId || exclusiveActivityByProduct.has(productId)) continue;
+    exclusiveActivityByProduct.set(productId, activity);
+  }
 
   const hotOrderByProduct = new Map<string, number>();
 
@@ -353,6 +385,7 @@ async function buildPublishedProducts(): Promise<Product[]> {
       const pricingPlans = (
         pricingByProduct.get(id) ?? []
       ).sort((a, b) => a.order - b.order);
+      const exclusiveActivity = exclusiveActivityByProduct.get(id);
 
       const productPrice = parsePrice(
         valueFrom(row, ["商品售價"]),
@@ -449,6 +482,9 @@ async function buildPublishedProducts(): Promise<Product[]> {
         offerStatus,
         offerStartDate: offerStartDate || undefined,
         offerEndDate: offerEndDate || undefined,
+        activityExclusive: Boolean(exclusiveActivity),
+        exclusiveActivityId: exclusiveActivity?.id,
+        exclusiveActivityName: exclusiveActivity?.name,
       };
     })
     .filter(
@@ -480,7 +516,7 @@ async function buildPublishedProducts(): Promise<Product[]> {
 
 const getPublishedProductsCached = unstable_cache(
   buildPublishedProducts,
-  ["pinru-published-products-v6-1"],
+  ["pinru-published-products-v6-2"],
   { revalidate: 60 },
 );
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import ActivityCard from "@/components/ActivityCard";
 import Banner from "@/components/Banner";
 import CategorySection from "@/components/CategorySection";
@@ -18,6 +19,33 @@ import { ProductCategory } from "@/types/product";
 
 export const revalidate = 60;
 
+export const metadata: Metadata = {
+  title: "世界好用 小新和品儒 首頁",
+  description: "世界好用 小新和品儒｜鍋具、五金、生活百貨，市場精選商品，提供多元商品與優惠活動。",
+  openGraph: {
+    type: "website",
+    locale: "zh_TW",
+    url: "https://pinru-shop.netlify.app/",
+    siteName: "世界好用 小新和品儒",
+    title: "世界好用 小新和品儒 首頁",
+    description: "世界好用 小新和品儒｜鍋具、五金、生活百貨，市場精選商品，提供多元商品與優惠活動。",
+    images: [
+      {
+        url: "/og-image-orange-v2.png",
+        width: 1200,
+        height: 630,
+        alt: "世界好用 小新和品儒",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "世界好用 小新和品儒 首頁",
+    description: "世界好用 小新和品儒｜鍋具、五金、生活百貨，市場精選商品，提供多元商品與優惠活動。",
+    images: ["/og-image-orange-v2.png"],
+  },
+};
+
 export default async function Home() {
   const [products, activities, sheetCategories, banners, settings, homepageEntries] =
     await Promise.all([
@@ -29,13 +57,14 @@ export default async function Home() {
       getHomepageEntries(),
     ]);
 
-  const productMap = new Map(products.map((product) => [product.id, product]));
+  const catalogProducts = products.filter((product) => !product.activityExclusive);
+  const productMap = new Map(catalogProducts.map((product) => [product.id, product]));
   const activityMap = new Map(activities.map((activity) => [activity.id, activity]));
 
   const categories: ProductCategory[] =
     sheetCategories.length > 0
       ? sheetCategories
-      : Array.from(new Set(products.map((product) => product.category).filter(Boolean))).map(
+      : Array.from(new Set(catalogProducts.map((product) => product.category).filter(Boolean))).map(
           (name, index) => ({ id: name, name: displayCategoryName(name), order: index + 1 }),
         );
 
@@ -47,7 +76,7 @@ export default async function Home() {
     .filter((product): product is NonNullable<typeof product> => Boolean(product));
 
   // 新品由 Products 自動判斷最近天數，並維持建立日期新到舊。
-  const newProducts = products
+  const newProducts = catalogProducts
     .filter((product) => product.isNew)
     .slice(0, settings.homeNewMax);
 

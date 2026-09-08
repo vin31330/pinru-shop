@@ -786,10 +786,10 @@ function CartPageContent() {
               {invalidCount > 0 || checking || checkError ? (
                 <div className="mt-5 rounded-2xl bg-slate-200 px-5 py-4 text-center font-black text-slate-500">請先處理失效商品並完成最新資料確認</div>
               ) : (
-                <Link href="/order" className="mt-5 block rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg md:text-lg font-black text-white">前往填寫訂單</Link>
+                <Link href="/order" className="shopping-action-button mt-5 flex touch-manipulation items-center justify-center rounded-2xl bg-[#d62872] text-center text-white shadow-sm transition hover:bg-[#bd1f63] active:bg-[#a91856]">結帳</Link>
               )}
-              <Link href={FRIENDLY_PATHS.allProducts} className="mt-3 block rounded-2xl border border-emerald-600 px-5 py-3.5 text-center font-black text-emerald-700">
-                繼續選購商品
+              <Link href={FRIENDLY_PATHS.allProducts} className="shopping-action-button mt-3 flex touch-manipulation items-center justify-center rounded-2xl border border-emerald-600 text-center text-emerald-700">
+                繼續購物
               </Link>
             </div>
           </>

@@ -2,10 +2,10 @@
 
 import {
   buildActivityPurchaseOptions,
+  getActivityOrdinaryChoiceOptions,
   getActivityPurchase,
 } from "@/lib/activityPurchase";
 import {
-  getOrdinaryProductOptions,
   getProductPricingPlans,
 } from "@/lib/pricingEngine";
 import type { Product } from "@/types/product";
@@ -29,7 +29,7 @@ export default function ActivityProductPurchaseOptions({
   const priceOption = plan.optionPrices.find(
     (item) => value[item.groupName] === item.optionValue,
   ) ?? plan.optionPrices[0];
-  const ordinaryOptions = getOrdinaryProductOptions(product, plan);
+  const ordinaryChoiceOptions = getActivityOrdinaryChoiceOptions(product, plan);
 
   function changePlan(planId: string) {
     onChange(buildActivityPurchaseOptions(product, planId));
@@ -43,7 +43,7 @@ export default function ActivityProductPurchaseOptions({
     onChange({ ...value, [`第${pieceIndex}件-${groupName}`]: optionValue });
   }
 
-  const hasChoices = plans.length > 1 || plan.optionPrices.length > 0 || ordinaryOptions.length > 0;
+  const hasChoices = plans.length > 1 || plan.optionPrices.length > 1 || ordinaryChoiceOptions.length > 0;
   if (!hasChoices) return null;
 
   return (
@@ -70,7 +70,7 @@ export default function ActivityProductPurchaseOptions({
         </label>
       )}
 
-      {plan.optionPrices.length > 0 && (
+      {plan.optionPrices.length > 1 && (
         <label className="mt-2 block">
           <span className="mb-1 block text-xs font-bold text-slate-600">尺寸／容量</span>
           <select
@@ -87,11 +87,11 @@ export default function ActivityProductPurchaseOptions({
         </label>
       )}
 
-      {ordinaryOptions.length > 0 && (
+      {ordinaryChoiceOptions.length > 0 && (
         <div className="mt-2 grid gap-2">
           {Array.from({ length: Math.max(1, plan.quantity) }, (_, pieceIndex) => (
             <div key={pieceIndex} className="grid gap-2 sm:grid-cols-2">
-              {ordinaryOptions.map((option) => {
+              {ordinaryChoiceOptions.map((option) => {
                 const key = `第${pieceIndex + 1}件-${option.name}`;
                 return (
                   <label key={key} className="block">

@@ -37,7 +37,7 @@ export function HeaderHomeButton() {
   return (
     <div
       data-header-home-button-row
-      className="flex px-3 pb-2 min-[1200px]:hidden"
+      className="flex px-3 pb-2 xl:hidden"
     >
       <HomeButtonLink />
     </div>
@@ -48,7 +48,7 @@ export default function FloatingHomeButton() {
   return (
     <div
       data-desktop-home-button-row
-      className="pointer-events-none hidden h-6 min-[1200px]:block"
+      className="pointer-events-none hidden h-6 xl:block"
     >
       <HomeButtonLink
         style={{

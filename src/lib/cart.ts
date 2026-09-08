@@ -254,6 +254,12 @@ export function reconcileCart(items: CartItem[], products: Product[], activities
 
     const promotionActivityId = item.selectedOptions["活動ID"];
     const promotionRole = item.selectedOptions["活動角色"];
+    if (product.activityExclusive && !promotionActivityId) {
+      return invalid(
+        item,
+        `此商品目前為「${product.exclusiveActivityName || "優惠活動"}」限定商品，請由活動頁重新加入購物車。`,
+      );
+    }
     if (promotionActivityId && activities) {
       const activity = activities.find((candidate) => candidate.id === promotionActivityId);
       if (!activity) return invalid(item, "此優惠活動已下架，請重新選購。");

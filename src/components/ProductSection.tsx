@@ -31,18 +31,18 @@ export default function ProductSection({
         }
       />
       <div className="grid grid-cols-2 gap-3 sm:hidden">
-        {products.slice(0, 6).map((product) => (
-          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} />
+        {products.slice(0, 6).map((product, index) => (
+          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} rank={title === "熱銷商品" ? index + 1 : undefined} />
         ))}
       </div>
       <div className="hidden gap-4 sm:grid sm:grid-cols-3 lg:hidden">
-        {products.slice(0, 6).map((product) => (
-          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} />
+        {products.slice(0, 6).map((product, index) => (
+          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} rank={title === "熱銷商品" ? index + 1 : undefined} />
         ))}
       </div>
       <div className="hidden gap-4 lg:grid lg:grid-cols-5">
-        {products.slice(0, limit).map((product) => (
-          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} />
+        {products.slice(0, limit).map((product, index) => (
+          <ProductCard key={product.id} product={product} large={large} href={productHrefs?.get(product.id)} rank={title === "熱銷商品" ? index + 1 : undefined} />
         ))}
       </div>
     </section>

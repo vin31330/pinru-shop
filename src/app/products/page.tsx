@@ -11,7 +11,7 @@ import { getPublishedCategories } from "@/lib/categories";
 import { categoryNameAliases, displayCategoryName } from "@/lib/categoryLabels";
 import { getPublishedProducts } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
-import { categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
+import { categoryNameFromSlug, categoryPath, FRIENDLY_PATHS } from "@/lib/paths";
 import { absoluteShareImage, DEFAULT_SHARE_IMAGE, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 export const revalidate = 60;
@@ -29,9 +29,16 @@ export async function generateMetadata({
     getPublishedProducts(),
     getPublishedCategories(),
   ]);
+  const catalogProducts = products.filter((product) => !product.activityExclusive);
+
+  const categoryNameFromShortSlug = categoryNameFromSlug(category);
+  const resolvedCategory = categoryNameFromShortSlug || category;
 
   const selectedCategory = categories.find(
-    (item) => item.id === category || item.name === category || categoryNameAliases(item.name).includes(category),
+    (item) =>
+      item.id === resolvedCategory ||
+      item.name === resolvedCategory ||
+      categoryNameAliases(item.name).includes(resolvedCategory),
   );
 
   let title = "全部商品";
@@ -39,14 +46,14 @@ export async function generateMetadata({
   let shareImage = DEFAULT_SHARE_IMAGE;
 
   if (section === "hot") {
-    const firstHot = [...products]
+    const firstHot = [...catalogProducts]
       .filter((product) => product.featured)
       .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999))[0];
     title = "熱銷商品";
     description = "看看大家喜歡的熱銷商品，方便快速挑選。";
     shareImage = firstHot?.mainImage || DEFAULT_SHARE_IMAGE;
   } else if (section === "new") {
-    const firstNew = products.find((product) => product.isNew);
+    const firstNew = catalogProducts.find((product) => product.isNew);
     title = "新品推薦";
     description = "看看最近加入的新品推薦，挑選最新商品。";
     shareImage = firstNew?.mainImage || DEFAULT_SHARE_IMAGE;
@@ -217,11 +224,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const returnTo = raw.returnTo ?? "";
   const exactReturnHref = safeInternalReturnHref(returnTo);
   const keyword = q.trim().normalize("NFKC").toLowerCase();
-  const [allProducts, sheetCategories, settings] = await Promise.all([
+  const [publishedProducts, sheetCategories, settings] = await Promise.all([
     getPublishedProducts(),
     getPublishedCategories(),
     getSiteSettings(),
   ]);
+  const allProducts = publishedProducts.filter((product) => !product.activityExclusive);
 
   const categories =
     sheetCategories.length > 0
@@ -230,11 +238,17 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           (name, index) => ({ id: name, name: displayCategoryName(name), order: index + 1 }),
         );
 
+  const categoryNameFromShortSlug = categoryNameFromSlug(category);
+  const resolvedCategory = categoryNameFromShortSlug || category;
+
   const selectedCategory = categories.find(
-    (item) => item.id === category || item.name === category || categoryNameAliases(item.name).includes(category),
+    (item) =>
+      item.id === resolvedCategory ||
+      item.name === resolvedCategory ||
+      categoryNameAliases(item.name).includes(resolvedCategory),
   );
   const selectedCategoryAliases = new Set([
-    category,
+    resolvedCategory,
     ...(selectedCategory ? [selectedCategory.id, selectedCategory.name] : []),
     ...categoryNameAliases(selectedCategory?.name || category),
   ].filter(Boolean));
@@ -245,7 +259,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     if (keyword) searchScores.set(product.id, score);
     const matchesKeyword = !keyword || score > 0;
     const matchesCategory =
-      !category ||
+      !resolvedCategory ||
       selectedCategoryAliases.has(product.category) ||
       categoryNameAliases(product.category).some((name) => selectedCategoryAliases.has(name));
     const matchesSection =
@@ -288,8 +302,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         ? "新品推薦"
         : section === "offer"
           ? "限時優惠"
-          : category
-            ? (selectedCategory?.name ?? displayCategoryName(category))
+          : resolvedCategory
+            ? (selectedCategory?.name ?? displayCategoryName(resolvedCategory))
             : "全部商品";
 
   const isProductCategoryFlow = !q && !section;
@@ -347,8 +361,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
           {products.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {products.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  rank={section === "hot" ? (currentPage - 1) * pageSize + index + 1 : undefined}
+                />
               ))}
             </div>
           ) : (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductImage from "@/components/ProductImage";
 import ActivityProductOptionModal from "@/components/ActivityProductOptionModal";
+import ActivityQuantityStepper from "@/components/ActivityQuantityStepper";
 import {
   addCartItems,
   buildProductCartItem,
@@ -563,11 +564,14 @@ export default function PromotionalActivitySelector({
                 {activity.repeatable ? "，可重複計算" : "，整張訂單最多 1 份"}
               </div>
             </div>
-            <div className="inline-flex overflow-hidden rounded-xl border bg-white">
-              <button type="button" disabled={!interactive} onClick={() => setQuantity((value) => Math.max(minimumTriggerQuantity, value - 1))} className="h-11 w-11 touch-manipulation text-xl font-black disabled:text-slate-300">−</button>
-              <div className="grid h-11 min-w-14 place-items-center border-x font-black">{quantity}</div>
-              <button type="button" disabled={!interactive} onClick={() => setQuantity((value) => Math.min(99, value + 1))} className="h-11 w-11 touch-manipulation text-xl font-black disabled:text-slate-300">＋</button>
-            </div>
+            <ActivityQuantityStepper
+              value={quantity}
+              compact
+              decreaseDisabled={!interactive || quantity <= minimumTriggerQuantity}
+              increaseDisabled={!interactive || quantity >= 99}
+              onDecrease={() => setQuantity((value) => Math.max(minimumTriggerQuantity, value - 1))}
+              onIncrease={() => setQuantity((value) => Math.min(99, value + 1))}
+            />
           </div>
         )}
 
@@ -669,29 +673,14 @@ export default function PromotionalActivitySelector({
                     自動贈送 {benefitQuantity} 個
                   </div>
                 ) : (
-                  <div className="inline-flex overflow-hidden rounded-xl border bg-white">
-                    <button
-                      type="button"
-                      disabled={!interactive || addonQuantity <= 1}
-                      onClick={() => setAddonQuantity((value) => Math.max(1, value - 1))}
-                      className="h-10 w-10 touch-manipulation text-lg font-black disabled:text-slate-300 sm:h-11 sm:w-11 sm:text-xl"
-                      aria-label="減少加購數量"
-                    >
-                      −
-                    </button>
-                    <div className="grid h-10 min-w-12 place-items-center border-x font-black sm:h-11 sm:min-w-14">
-                      {benefitQuantity}
-                    </div>
-                    <button
-                      type="button"
-                      disabled={!interactive || addonQuantity >= eligibleBenefitQuantity}
-                      onClick={() => setAddonQuantity((value) => Math.min(eligibleBenefitQuantity, value + 1))}
-                      className="h-10 w-10 touch-manipulation text-lg font-black text-emerald-700 disabled:text-slate-300 sm:h-11 sm:w-11 sm:text-xl"
-                      aria-label="增加加購數量"
-                    >
-                      ＋
-                    </button>
-                  </div>
+                  <ActivityQuantityStepper
+                    value={benefitQuantity}
+                    compact
+                    decreaseDisabled={!interactive || addonQuantity <= 1}
+                    increaseDisabled={!interactive || addonQuantity >= eligibleBenefitQuantity}
+                    onDecrease={() => setAddonQuantity((value) => Math.max(1, value - 1))}
+                    onIncrease={() => setAddonQuantity((value) => Math.min(eligibleBenefitQuantity, value + 1))}
+                  />
                 )}
               </div>
             )}
@@ -792,8 +781,8 @@ export default function PromotionalActivitySelector({
             </>
           ) : (
             <>
-              <button type="button" disabled={!interactive} onClick={() => submit(false)} className="touch-manipulation rounded-2xl border-2 border-emerald-600 px-5 py-4 text-lg font-black text-emerald-700 disabled:border-slate-300 disabled:text-slate-400">加入購物車</button>
-              <button type="button" disabled={!interactive} onClick={() => submit(true)} className="touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white disabled:bg-slate-300">加入並前往購物車</button>
+              <button type="button" disabled={!interactive} onClick={() => submit(false)} className="shopping-action-button flex touch-manipulation items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 text-emerald-700 disabled:border-slate-300 disabled:text-slate-400"><span aria-hidden="true">🛒</span><span>加入購物車</span></button>
+              <button type="button" disabled={!interactive} onClick={() => submit(true)} className="shopping-action-button touch-manipulation rounded-2xl bg-[#d62872] text-white shadow-sm transition hover:bg-[#bd1f63] active:bg-[#a91856] disabled:bg-slate-300">直接購買</button>
             </>
           )}
         </div>

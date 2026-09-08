@@ -105,7 +105,7 @@ export function getPromotionDescription(activity: Activity): string {
 
   if (isPerItemPromotion) {
     if (method === "FREE") return "活動商品免費";
-    if (method === "FIXED_PRICE") return `活動商品固定 NT$${Math.round(value).toLocaleString("zh-TW")}`;
+    if (method === "FIXED_PRICE") return `快閃優惠價 NT$${Math.round(value).toLocaleString("zh-TW")}`;
     if (method === "AMOUNT_OFF") return `活動商品現折 NT$${Math.round(value).toLocaleString("zh-TW")}`;
     if (method === "PERCENT_PRICE") return `活動商品支付 ${value}%（約 ${value} 折）`;
     const payablePercent = Math.max(0, 100 - Math.min(value, 100));

@@ -2,28 +2,89 @@
 
 import Link from "next/link";
 import ProductImage from "@/components/ProductImage";
+import { productDescriptionText } from "@/lib/productDescriptionText";
 import { rememberReturnPosition } from "@/lib/returnPosition";
 import { productPath } from "@/lib/paths";
 import { Product } from "@/types/product";
 
 const currency = new Intl.NumberFormat("zh-TW");
 
+function HotRankLabel({ rank }: { rank: number }) {
+  const podiumStyles = [
+    {
+      title: "熱銷冠軍",
+      background: "linear-gradient(90deg, #fde9a9 0%, #fff8dc 64%, #ffffff 100%)",
+      accent: "#9a6700",
+      text: "#694500",
+      border: "#ddb94f",
+    },
+    {
+      title: "熱銷亞軍",
+      background: "linear-gradient(90deg, #dce3eb 0%, #f4f7fa 64%, #ffffff 100%)",
+      accent: "#475569",
+      text: "#334155",
+      border: "#a8b4c3",
+    },
+    {
+      title: "熱銷季軍",
+      background: "linear-gradient(90deg, #f6c89f 0%, #fff0e2 64%, #ffffff 100%)",
+      accent: "#9a4f20",
+      text: "#743918",
+      border: "#d89b6c",
+    },
+  ];
+
+  const podium = podiumStyles[rank - 1];
+  const title = podium?.title ?? "熱銷排行";
+  const background = podium?.background ?? "linear-gradient(90deg, #dfe7ff 0%, #f1f4ff 64%, #ffffff 100%)";
+  const accent = podium?.accent ?? "#4338ca";
+  const text = podium?.text ?? "#312e81";
+  const border = podium?.border ?? "#a5b4fc";
+
+  return (
+    <div
+      aria-label={`熱銷第 ${rank} 名`}
+      className="flex h-10 items-center justify-between border-b px-2.5 sm:px-3"
+      style={{ background, borderColor: border, color: text }}
+    >
+      <span className="flex min-w-0 items-center gap-2 text-[13px] font-black tracking-wide sm:text-sm">
+        <span
+          aria-hidden="true"
+          className="h-2.5 w-2.5 shrink-0 rotate-45 rounded-[2px]"
+          style={{ background: accent }}
+        />
+        <span className="truncate">{title}</span>
+      </span>
+      <span
+        className="ml-2 shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-black tracking-wide text-white shadow-sm sm:text-xs"
+        style={{ background: accent, borderColor: accent }}
+      >
+        NO.{rank}
+      </span>
+    </div>
+  );
+}
+
 export default function ProductCard({
   product,
   large = false,
   href,
+  rank,
 }: {
   product: Product;
   large?: boolean;
   href?: string;
+  rank?: number;
 }) {
   const price = product.salePrice ?? product.price;
   const originalPrice = product.basePrice ?? product.price;
   const productHref = href || productPath(product.id, product.name);
   const purchaseHref = `${productHref}#product-purchase`;
+  const descriptionPreview = productDescriptionText(product.description);
 
   return (
     <article className={`product-card ${large ? "product-card--large" : ""}`}>
+      {rank && rank > 0 ? <HotRankLabel rank={rank} /> : null}
       <Link
         href={productHref}
         onClick={() => rememberReturnPosition(productHref)}
@@ -52,8 +113,8 @@ export default function ProductCard({
           <p className="mt-1 line-clamp-2 text-base leading-6 text-slate-500">
             {product.subtitle}
           </p>
-        ) : product.description ? (
-          <p className="mt-1 line-clamp-1 text-base text-slate-500">{product.description}</p>
+        ) : descriptionPreview ? (
+          <p className="mt-1 line-clamp-1 text-base text-slate-500">{descriptionPreview}</p>
         ) : null}
         <div className="mt-auto flex items-end justify-between gap-2 pt-3">
           {product.salePrice ? (

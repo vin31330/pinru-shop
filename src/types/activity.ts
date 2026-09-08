@@ -31,6 +31,7 @@ export type Activity = {
   homeOrder: number;
   imageUrl?: string;
   selectOptionsPerItem: boolean;
+  exclusiveProducts: boolean;
   products: ActivityProduct[];
   status: "upcoming" | "active" | "ended";
 };

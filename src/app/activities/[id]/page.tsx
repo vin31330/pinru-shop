@@ -9,7 +9,7 @@ import Header from "@/components/Header";
 import ProductImage from "@/components/ProductImage";
 import { getActivityById } from "@/lib/activities";
 import { getActivityPriceText, isMixMatchActivity, isQuantityDiscountActivity } from "@/lib/activityPresentation";
-import { FRIENDLY_PATHS } from "@/lib/paths";
+import { activityPath, FRIENDLY_PATHS } from "@/lib/paths";
 import { absoluteShareImage, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-TW", {
@@ -36,7 +36,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       locale: "zh_TW",
-      url: `https://pinru-shop.netlify.app/activities/${encodeURIComponent(activity.id)}/${encodeURIComponent(activity.name)}`,
+      url: `https://pinru-shop.netlify.app/a/${encodeURIComponent(activity.id)}`,
       siteName: SITE_NAME,
       title,
       description,
@@ -77,7 +77,9 @@ export default async function ActivityDetailPage({
             />
           </div>
           <div className="p-5 sm:p-6">
-            <div className="text-sm font-black text-rose-600">限時活動</div>
+            <div className="text-sm font-black text-rose-600">
+              {activity.exclusiveProducts ? "活動限定優惠" : "限時活動"}
+            </div>
             <h1 className="mt-1 text-2xl font-black sm:text-3xl">{activity.name}</h1>
             {activity.subtitle && (
               <p className="mt-2 text-base text-slate-500 sm:text-lg">

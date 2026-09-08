@@ -147,6 +147,9 @@ async function buildPublishedActivities(options?: { includeUpcoming?: boolean; i
         homeOrder: parseNumber(valueFrom(row, ["首頁排序"])) || 999,
         imageUrl: websiteImage || appSheetImage || undefined,
         selectOptionsPerItem: toBoolean(valueFrom(row, ["是否逐件選規格"])),
+        exclusiveProducts: toBoolean(
+          valueFrom(row, ["活動限定商品", "活動期間僅顯示於活動"]),
+        ),
         products: (relationsByActivity.get(id) ?? []).sort((a, b) => a.order - b.order),
         status,
       };
@@ -158,13 +161,13 @@ async function buildPublishedActivities(options?: { includeUpcoming?: boolean; i
 
 const getActiveActivitiesCached = unstable_cache(
   () => buildPublishedActivities(),
-  ["pinru-active-activities-v6-1"],
+  ["pinru-active-activities-v6-2"],
   { revalidate: 60 },
 );
 
 const getAllActivitiesCached = unstable_cache(
   () => buildPublishedActivities({ includeUpcoming: true, includeEnded: true }),
-  ["pinru-all-activities-v6-1"],
+  ["pinru-all-activities-v6-2"],
   { revalidate: 60 },
 );
 

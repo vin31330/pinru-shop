@@ -34,6 +34,10 @@ const TAG_ALIASES: Record<string, string> = {
   提醒: "notice",
   成功: "success",
   警告: "warning",
+  重點: "highlight",
+  特色: "feature",
+  技巧: "tip",
+  適合: "suitable",
   標題: "title",
   連結: "link",
   按鈕: "button",
@@ -153,6 +157,10 @@ function renderNodes(nodes: RichNode[] = [], keyPrefix = "n"): React.ReactNode[]
       case "notice": return <div key={key} className="my-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 font-bold text-amber-950">{children}</div>;
       case "success": return <div key={key} className="my-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-bold text-emerald-950">{children}</div>;
       case "warning": return <div key={key} className="my-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 font-bold text-rose-950">{children}</div>;
+      case "highlight": return <div key={key} className="my-3 rounded-xl border-2 border-pink-200 bg-pink-50 px-4 py-3 font-bold text-pink-950 shadow-sm">{children}</div>;
+      case "feature": return <div key={key} className="my-3 rounded-xl border-l-4 border-violet-500 bg-violet-50 px-4 py-3 font-bold text-violet-950">{children}</div>;
+      case "tip": return <div key={key} className="my-3 rounded-2xl border border-dashed border-teal-400 bg-teal-50 px-4 py-3 font-bold text-teal-950">{children}</div>;
+      case "suitable": return <div key={key} className="my-3 rounded-xl border border-stone-300 bg-amber-50/70 px-4 py-3 font-bold text-stone-900">{children}</div>;
       case "divider": return <hr key={key} className="my-5 border-0 border-t border-slate-300" />;
       case "dividerBold": return <hr key={key} className="my-6 border-0 border-t-4 border-slate-700" />;
       case "spacer": return <div key={key} className="h-5" aria-hidden="true" />;

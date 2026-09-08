@@ -535,18 +535,22 @@ export default function AddToCartPanel({
           disabled={!interactive}
           onClick={() => add(false)}
           data-qa-add-cart="stay"
-          className="min-h-14 w-full touch-manipulation rounded-2xl border-2 border-emerald-600 bg-white px-5 py-4 text-lg font-black text-emerald-700 active:bg-emerald-50 disabled:border-slate-300 disabled:text-slate-400"
+          className="shopping-action-button flex w-full touch-manipulation items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 bg-white text-emerald-700 active:bg-emerald-50 disabled:border-slate-300 disabled:text-slate-400"
         >
-          {added ? "已加入購物車 ✓" : "加入購物車"}
+          {added ? (
+            <span>已加入購物車 ✓</span>
+          ) : (
+            <><span aria-hidden="true">🛒</span><span>加入購物車</span></>
+          )}
         </button>
         <button
           type="button"
           disabled={!interactive}
           onClick={() => add(true)}
           data-qa-add-cart="go"
-          className="min-h-14 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white active:bg-emerald-700 disabled:bg-slate-300"
+          className="shopping-action-button w-full touch-manipulation rounded-2xl bg-[#d62872] text-white shadow-sm transition hover:bg-[#bd1f63] active:bg-[#a91856] disabled:bg-slate-300"
         >
-          加入並查看購物車
+          直接購買
         </button>
       </div>
 

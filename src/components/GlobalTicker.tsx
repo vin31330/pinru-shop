@@ -35,8 +35,9 @@ function shouldShowTicker(pathname: string): boolean {
   if (path === "/" || path === "/home/首頁") return true;
   if (path === "/activities" || path === "/activities/all/優惠活動") return true;
   if (path === "/products" || path === "/products/all/查看全部商品") return true;
-  if (path === "/products/hot/熱銷商品") return true;
-  if (path === "/products/new/新品推薦") return true;
+  if (path === "/hot" || path === "/products/hot/熱銷商品") return true;
+  if (path === "/new" || path === "/products/new/新品推薦") return true;
+  if (path === "/categories" || path.startsWith("/c/")) return true;
 
   return false;
 }

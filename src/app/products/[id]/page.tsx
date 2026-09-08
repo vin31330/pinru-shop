@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import AddToCartPanel from "@/components/AddToCartPanel";
 import ActivityProductConfigurator from "@/components/ActivityProductConfigurator";
@@ -8,7 +9,7 @@ import Header from "@/components/Header";
 import ProductGallery from "@/components/ProductGallery";
 import RichProductDescription from "@/components/RichProductDescription";
 import { getProductById } from "@/lib/products";
-import { FRIENDLY_PATHS } from "@/lib/paths";
+import { activityPath, FRIENDLY_PATHS } from "@/lib/paths";
 import { getActivityById } from "@/lib/activities";
 import { absoluteShareImage, SITE_NAME, cleanDescription } from "@/lib/shareMetadata";
 
@@ -31,7 +32,7 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       locale: "zh_TW",
-      url: `https://pinru-shop.netlify.app/products/${encodeURIComponent(product.id)}/${encodeURIComponent(product.name)}`,
+      url: `https://pinru-shop.netlify.app/products/${encodeURIComponent(product.id)}`,
       siteName: SITE_NAME,
       title,
       description,
@@ -64,7 +65,7 @@ function formatOfferDate(value?: string): string {
   }).format(parsed);
 }
 
-export default async function ProductPage({
+export async function ProductPage({
   params,
   searchParams,
 }: ProductPageProps) {
@@ -84,8 +85,16 @@ export default async function ProductPage({
   const activityReturnHref = query.returnTo?.startsWith("/")
     ? query.returnTo
     : activity
-      ? `/activities/${encodeURIComponent(activity.id)}`
+      ? activityPath(activity.id, activity.name)
       : FRIENDLY_PATHS.allProducts;
+  const exclusiveActivityHref =
+    product.activityExclusive && product.exclusiveActivityId
+      ? activityPath(
+          product.exclusiveActivityId,
+          product.exclusiveActivityName || "優惠活動",
+        )
+      : undefined;
+  const isExclusiveCatalogView = Boolean(exclusiveActivityHref && !activityRelation);
 
   const media = Array.isArray(product.media)
     ? product.media
@@ -133,6 +142,28 @@ export default async function ProductPage({
               </p>
             )}
 
+            {isExclusiveCatalogView ? (
+              <div
+                id="product-purchase"
+                className="my-5 rounded-3xl border-2 border-rose-300 bg-gradient-to-br from-rose-50 to-amber-50 p-5 shadow-sm"
+              >
+                <div className="text-sm font-black tracking-wide text-rose-700">
+                  活動期間限定
+                </div>
+                <div className="mt-1 text-2xl font-black text-slate-900">
+                  目前為活動限定商品
+                </div>
+                <p className="mt-2 leading-7 text-slate-700">
+                  此商品目前只在「{product.exclusiveActivityName || "優惠活動"}」提供活動價購買，一般商品頁暫停下單。
+                </p>
+                <Link
+                  href={exclusiveActivityHref!}
+                  className="mt-4 flex min-h-14 touch-manipulation items-center justify-center rounded-2xl bg-rose-600 px-5 py-4 text-center text-lg font-black text-white shadow-sm transition hover:bg-rose-700 active:bg-rose-800"
+                >
+                  前往優惠活動購買 →
+                </Link>
+              </div>
+            ) : (
             <div className="my-5">
               {product.salePrice ? (
                 <>
@@ -170,13 +201,17 @@ export default async function ProductPage({
                 <p className="mt-2 text-sm text-slate-500">本商品限時優惠已結束。</p>
               )}
             </div>
+            )}
 
-            <a
-              href="#product-purchase"
-              className="mb-5 flex min-h-14 touch-manipulation items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg font-black text-white active:bg-emerald-700 min-[1200px]:hidden"
-            >
-              選擇規格、數量並加入購物車 ↓
-            </a>
+            {!isExclusiveCatalogView && (
+              <a
+                href="#product-purchase"
+                className="mb-5 flex min-h-14 touch-manipulation items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-4 text-center text-lg font-black text-white active:bg-emerald-700 min-[1200px]:hidden"
+              >
+                <span aria-hidden="true">🛒</span>
+                <span>選擇規格、數量並加入購物車 ↓</span>
+              </a>
+            )}
 
             <RichProductDescription description={product.description} />
 
@@ -206,7 +241,7 @@ export default async function ProductPage({
                   options,
                 }}
               />
-            ) : (
+            ) : isExclusiveCatalogView ? null : (
               <AddToCartPanel
                 purchaseId="product-purchase"
                 product={{
@@ -225,3 +260,5 @@ export default async function ProductPage({
     </main>
   );
 }
+
+export default ProductPage;

@@ -34,22 +34,6 @@ const navigationItems = [
   { label: "生活小物", href: categoryPath("生活小物", "生活小物"), group: "category" },
 ] as const;
 
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.25"
-    >
-      <circle cx="11" cy="11" r="6.5" />
-      <path d="m16 16 4 4" />
-    </svg>
-  );
-}
-
 export default function Header({
   showHomeButton = false,
   showBackButton = false,
@@ -86,7 +70,7 @@ export default function Header({
     setMenuOpen(false);
 
     const needsExactReturn =
-      href === FRIENDLY_PATHS.allProducts || href.startsWith("/products/category/");
+      href === FRIENDLY_PATHS.allProducts || href.startsWith("/c/") || href.startsWith("/products/category/");
 
     if (!needsExactReturn) return;
 
@@ -138,10 +122,10 @@ export default function Header({
               />
               <button
                 type="submit"
-                aria-label="搜尋"
-                className="grid h-10 min-w-12 shrink-0 touch-manipulation place-items-center rounded-lg px-2 text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100"
+                aria-label="搜尋商品"
+                className="flex h-10 min-w-[76px] shrink-0 touch-manipulation items-center justify-center rounded-lg bg-emerald-600 px-4 text-base font-black text-white shadow-sm transition hover:bg-emerald-700 active:bg-emerald-800"
               >
-                <SearchIcon />
+                搜尋
               </button>
             </div>
           </form>
@@ -186,10 +170,10 @@ export default function Header({
             />
             <button
               type="submit"
-              aria-label="搜尋"
-              className="grid h-12 min-w-14 shrink-0 touch-manipulation place-items-center rounded-xl px-2 text-slate-700 transition active:bg-emerald-100 active:text-emerald-800"
+              aria-label="搜尋商品"
+              className="flex h-12 min-w-[76px] shrink-0 touch-manipulation items-center justify-center rounded-xl bg-emerald-600 px-3 text-base font-black text-white shadow-sm transition active:bg-emerald-800"
             >
-              <SearchIcon />
+              搜尋
             </button>
           </div>
         </form>
@@ -203,7 +187,7 @@ export default function Header({
                 forceFallback={backForceFallback}
               />
             </div>
-            <div className="hidden px-3 pb-2 md:flex min-[1200px]:hidden">
+            <div className="hidden px-3 pb-2 md:flex xl:hidden">
               <HomeButtonLink />
             </div>
           </>

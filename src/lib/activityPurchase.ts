@@ -14,13 +14,30 @@ function bundleColorOption(plan: PricingPlan, options: ProductOption[]): Product
   return option;
 }
 
+export function getActivityOrdinaryChoiceOptions(
+  product: Product,
+  plan: PricingPlan,
+): ProductOption[] {
+  const ordinaryOptions = getOrdinaryProductOptions(product, plan);
+  const autoColor = bundleColorOption(plan, ordinaryOptions);
+  return ordinaryOptions.filter(
+    (option) => option.name !== autoColor?.name && option.values.length > 1,
+  );
+}
 
 export function hasActivityPurchaseChoices(product: Product): boolean {
   const plans = getProductPricingPlans(product);
   if (plans.length > 1) return true;
-  return plans.some((plan) =>
-    plan.optionPrices.length > 0 || getOrdinaryProductOptions(product, plan).length > 0,
-  );
+
+  const plan = plans[0];
+  if (!plan) return false;
+
+  // 只剩一個有效價格規格時，預設值就是唯一選擇，無需再讓客人確認。
+  if (plan.optionPrices.length > 1) return true;
+
+  // 每個規格群組都只剩一個有效值時，系統會自動綁定。
+  // 「包色／全色」方案本來就會依件數自動分配顏色，也不需額外彈窗。
+  return getActivityOrdinaryChoiceOptions(product, plan).length > 0;
 }
 
 export function buildActivityPurchaseOptions(product: Product, planId?: string): Record<string, string> {

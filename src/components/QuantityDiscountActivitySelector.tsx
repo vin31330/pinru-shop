@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductImage from "@/components/ProductImage";
 import ActivityProductOptionModal from "@/components/ActivityProductOptionModal";
+import ActivityQuantityStepper from "@/components/ActivityQuantityStepper";
 import {
   addCartItems,
   buildProductCartItem,
@@ -175,22 +176,14 @@ export default function QuantityDiscountActivitySelector({
     if (!canAdd(relation)) return;
     const selectedOptions = buildActivityPurchaseOptions(relation.product);
     setUnits((current) => {
-      const first = {
+      const next = {
         key: `${relation.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         relationId: relation.id,
         selectedOptions,
       };
-      // 第二件優惠：客人先選一件，第二件預設帶入完全相同的商品／規格，之後仍可個別修改。
-      if (isSecondDiscount && required === 2 && current.length % 2 === 0) {
-        const second = {
-          ...first,
-          key: `${relation.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-second`,
-        };
-        return [...current, first, second];
-      }
-      return [...current, first];
+      return [...current, next];
     });
-    setMessage(isSecondDiscount ? `「${relation.product.name}」第一件與第二件已加入，可個別修改第二件規格 ✓` : `「${relation.product.name}」已加入活動 ✓`);
+    setMessage(`「${relation.product.name}」已加入 1 件 ✓`);
   }
 
   function openAdd(relation: ActivityProduct) {
@@ -212,24 +205,25 @@ export default function QuantityDiscountActivitySelector({
     } else {
       const key = `${modalTarget.relation.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       setUnits((current) => {
-        const first = { key, relationId: modalTarget.relation.id, selectedOptions };
-        if (isSecondDiscount && required === 2 && current.length % 2 === 0) {
-          const second = {
-            ...first,
-            key: `${modalTarget.relation.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}-second`,
-          };
-          return [...current, first, second];
-        }
-        return [...current, first];
+        const next = { key, relationId: modalTarget.relation.id, selectedOptions };
+        return [...current, next];
       });
       setScrollToKey(key);
-      setMessage(isSecondDiscount ? `「${modalTarget.relation.product.name}」第一件與第二件已加入，可個別修改第二件規格 ✓` : `「${modalTarget.relation.product.name}」已加入活動 ✓`);
+      setMessage(`「${modalTarget.relation.product.name}」規格已選好並加入 1 件 ✓`);
     }
     setModalTarget(null);
   }
 
   function removeUnit(key: string) {
     setUnits((current) => current.filter((item) => item.key !== key));
+    setMessage("");
+  }
+
+  function removeLastForRelation(relationId: string) {
+    setUnits((current) => {
+      const index = current.map((item) => item.relationId).lastIndexOf(relationId);
+      return index < 0 ? current : current.filter((_, itemIndex) => itemIndex !== index);
+    });
     setMessage("");
   }
 
@@ -287,15 +281,17 @@ export default function QuantityDiscountActivitySelector({
         open={Boolean(modalTarget)}
         product={modalTarget?.relation.product}
         initialValue={modalTarget?.initialValue}
-        title={modalTarget?.editKey ? "修改尺寸／規格" : "選擇尺寸／規格"}
-        confirmLabel={modalTarget?.editKey ? "儲存這個修改" : "加入活動"}
+        title={modalTarget?.editKey
+          ? "修改尺寸／規格"
+          : modalTarget ? `選擇第 ${countFor(modalTarget.relation.id) + 1} 件規格` : "選擇尺寸／規格"}
+        confirmLabel={modalTarget?.editKey ? "儲存這個修改" : "確認加入 1 件"}
         onClose={() => setModalTarget(null)}
         onConfirm={confirmModal}
       />
 
       <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-xl font-black">選擇活動商品</h2>
-        <p className="mt-2 text-slate-500">有尺寸／規格的商品會直接在活動頁選擇；沒有規格的商品會直接加入。</p>
+        <p className="mt-2 text-slate-500">按「＋」增加一件；商品有規格時，會立即跳出該件的規格選擇。</p>
         <div className="mt-3 inline-flex rounded-full bg-rose-50 px-4 py-2 font-black text-rose-700">{getPromotionDescription(activity)}</div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -316,45 +312,27 @@ export default function QuantityDiscountActivitySelector({
                     {quantity > 0 && <div className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">✓ 已選 {quantity} 件</div>}
                   </div>
                 </div>
-                <button type="button" onClick={() => openAdd(relation)} className="mt-4 min-h-12 w-full rounded-xl bg-emerald-600 px-4 py-3 text-center font-black text-white active:bg-emerald-700">
-                  {hasChoices ? "選尺寸／規格" : "加入活動"}
-                </button>
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
+                  <div>
+                    <div className="font-black text-slate-900">選擇數量</div>
+                    <div className="mt-1 text-xs font-bold text-slate-500">
+                      {hasChoices ? "每按一次＋，選擇該件規格" : "每按一次＋，增加一件"}
+                    </div>
+                  </div>
+                  <ActivityQuantityStepper
+                    value={quantity}
+                    compact
+                    decreaseDisabled={quantity === 0}
+                    increaseDisabled={(!activity.repeatable && units.length >= required) || quantity >= (relation.maxPerGroup ?? 99)}
+                    onDecrease={() => removeLastForRelation(relation.id)}
+                    onIncrease={() => openAdd(relation)}
+                  />
+                </div>
               </article>
             );
           })}
         </div>
 
-        {pricedUnits.length > 0 && (
-          <div className="mt-6 border-t pt-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-lg font-black">已選商品</h3>
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">共 {pricedUnits.length} 件</span>
-            </div>
-            <div className="space-y-3">
-              {pricedUnits.map((unit, index) => (
-                <div id={`activity-selected-${unit.key}`} key={unit.key} className="scroll-mt-28 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {isSecondDiscount && <div className="mb-1 text-sm font-black text-emerald-700">{lineRole(index)}</div>}
-                      <div className="font-black">✓ {unit.relation.product.name}</div>
-                      <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(unit.relation.product, unit.options)}</div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                        {unit.finalPrice < unit.price && <span className="font-bold text-slate-400 line-through">NT${currency.format(unit.price)}</span>}
-                        <span className="text-lg font-black text-rose-600">NT${currency.format(unit.finalPrice)}</span>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col gap-2">
-                      {hasActivityPurchaseChoices(unit.relation.product) && (
-                        <button type="button" onClick={() => setModalTarget({ relation: unit.relation, editKey: unit.key, initialValue: unit.options })} className="rounded-xl border border-emerald-600 px-3 py-2 text-sm font-black text-emerald-700">修改</button>
-                      )}
-                      <button type="button" onClick={() => removeUnit(unit.key)} className="rounded-xl px-3 py-2 text-sm font-black text-rose-500">移除</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
 
       <section className="rounded-3xl border bg-white p-5 shadow-sm sm:p-6">
@@ -368,15 +346,25 @@ export default function QuantityDiscountActivitySelector({
           {pricedUnits.length === 0 ? (
             <div className="rounded-2xl bg-slate-50 p-5 text-center font-bold text-slate-500">尚未選擇活動商品</div>
           ) : pricedUnits.map((unit, index) => (
-            <div key={unit.key} className="rounded-2xl bg-slate-50 p-4">
-              {isSecondDiscount && <div className="mb-1 text-sm font-black text-emerald-700">{lineRole(index)}</div>}
-              <div className="font-black">{unit.relation.product.name}</div>
-              <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(unit.relation.product, unit.options)}</div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-sm font-bold text-emerald-700">{isSecondDiscount ? lineRole(index) : (unit.isDiscounted ? "活動優惠" : "活動商品")}</span>
-                <div className="text-right">
-                  {unit.finalPrice < unit.price && <span className="mr-2 text-sm font-bold text-slate-400 line-through">NT${currency.format(unit.price)}</span>}
-                  <span className="text-xl font-black text-rose-600">NT${currency.format(unit.finalPrice)}</span>
+            <div id={`activity-selected-${unit.key}`} key={unit.key} className="scroll-mt-28 rounded-2xl bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {isSecondDiscount && <div className="mb-1 text-sm font-black text-emerald-700">{lineRole(index)}</div>}
+                  <div className="font-black">{unit.relation.product.name}</div>
+                  <div className="mt-1 text-sm font-bold leading-6 text-slate-600">{getActivityPurchaseSummary(unit.relation.product, unit.options)}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-bold text-emerald-700">{isSecondDiscount ? lineRole(index) : (unit.isDiscounted ? "活動優惠" : "活動商品")}</span>
+                    <div className="ml-auto text-right">
+                      {unit.finalPrice < unit.price && <span className="mr-2 text-sm font-bold text-slate-400 line-through">NT${currency.format(unit.price)}</span>}
+                      <span className="text-xl font-black text-rose-600">NT${currency.format(unit.finalPrice)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col gap-2">
+                  {hasActivityPurchaseChoices(unit.relation.product) && (
+                    <button type="button" onClick={() => setModalTarget({ relation: unit.relation, editKey: unit.key, initialValue: unit.options })} className="rounded-xl border border-emerald-600 px-3 py-2 text-sm font-black text-emerald-700">修改</button>
+                  )}
+                  <button type="button" onClick={() => removeUnit(unit.key)} className="rounded-xl px-3 py-2 text-sm font-black text-rose-500">移除</button>
                 </div>
               </div>
             </div>
@@ -386,12 +374,11 @@ export default function QuantityDiscountActivitySelector({
         {remainder > 0 && <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 font-bold text-amber-700">還差 {required - remainder} 件可完成一組優惠</div>}
         {completeGroups > 0 && required > 1 && <div className="mt-3 text-sm font-bold text-emerald-700">已完成 {completeGroups} 組活動優惠。</div>}
 
-        <div className="mt-5 flex items-end justify-between gap-4 border-t pt-5">
+        <div className="mt-5 border-t pt-5">
           <div>
             <div className="text-sm text-slate-500">優惠後合計</div>
             <div className="text-3xl font-black text-rose-600">NT${currency.format(total)}</div>
           </div>
-          <div className="rounded-full bg-rose-50 px-4 py-2 font-black text-rose-600">{getPromotionDescription(activity)}</div>
         </div>
 
         {message && <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center font-bold text-amber-700">{message}</div>}
@@ -404,8 +391,8 @@ export default function QuantityDiscountActivitySelector({
             </>
           ) : (
             <>
-              <button type="button" disabled={!interactive} onClick={() => submit(false)} className="rounded-2xl border-2 border-emerald-600 px-5 py-4 text-lg font-black text-emerald-700 disabled:border-slate-300 disabled:text-slate-300">加入購物車</button>
-              <button type="button" disabled={!interactive} onClick={() => submit(true)} className="rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white disabled:bg-slate-300">加入並前往購物車</button>
+              <button type="button" disabled={!interactive} onClick={() => submit(false)} className="shopping-action-button flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 text-emerald-700 disabled:border-slate-300 disabled:text-slate-300"><span aria-hidden="true">🛒</span><span>加入購物車</span></button>
+              <button type="button" disabled={!interactive} onClick={() => submit(true)} className="shopping-action-button rounded-2xl bg-[#d62872] text-white shadow-sm transition hover:bg-[#bd1f63] active:bg-[#a91856] disabled:bg-slate-300">直接購買</button>
             </>
           )}
         </div>

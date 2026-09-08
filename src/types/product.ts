@@ -52,6 +52,9 @@ export type Product = {
   offerStatus?: "none" | "upcoming" | "active" | "ended";
   offerStartDate?: string;
   offerEndDate?: string;
+  activityExclusive?: boolean;
+  exclusiveActivityId?: string;
+  exclusiveActivityName?: string;
 };
 
 export type ProductCategory = {

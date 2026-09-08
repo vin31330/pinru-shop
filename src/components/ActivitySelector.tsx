@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductImage from "@/components/ProductImage";
 import ActivityProductOptionModal from "@/components/ActivityProductOptionModal";
+import ActivityQuantityStepper from "@/components/ActivityQuantityStepper";
 import { loadCart } from "@/lib/cart";
 import { addActivityToCart, getActivityCartId, replaceActivityCartItem } from "@/lib/activityCart";
 import { Activity, ActivitySelection, ActivityProduct } from "@/types/activity";
@@ -115,6 +116,14 @@ export default function ActivitySelector({
     setMessage("");
   }
 
+  function removeLastForProduct(productId: string) {
+    setSelections((current) => {
+      const index = current.map((item) => item.productId).lastIndexOf(productId);
+      return index < 0 ? current : current.filter((_, itemIndex) => itemIndex !== index);
+    });
+    setMessage("");
+  }
+
   function submit(goToCart: boolean) {
     if (selections.length !== activity.requiredCount) {
       setMessage(`請選滿 ${activity.requiredCount} 件商品。`);
@@ -145,8 +154,10 @@ export default function ActivitySelector({
         open={Boolean(modalTarget)}
         product={modalTarget?.relation.product}
         initialValue={modalTarget?.initialValue}
-        title={modalTarget?.editIndex !== undefined ? "修改尺寸／規格" : "選擇尺寸／規格"}
-        confirmLabel={modalTarget?.editIndex !== undefined ? "儲存這個規格" : "加入活動"}
+        title={modalTarget?.editIndex !== undefined
+          ? "修改尺寸／規格"
+          : modalTarget ? `選擇第 ${(counts.get(modalTarget.relation.productId) ?? 0) + 1} 件規格` : "選擇尺寸／規格"}
+        confirmLabel={modalTarget?.editIndex !== undefined ? "儲存這個規格" : "確認加入 1 件"}
         onClose={() => setModalTarget(null)}
         onConfirm={confirmModal}
       />
@@ -154,7 +165,7 @@ export default function ActivitySelector({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-black">{editCartId ? "修改活動商品" : "挑選活動商品"}</h2>
-          <p className="mt-1 text-sm text-slate-500">點「選尺寸／規格」後直接在活動頁完成，不會跳頁。</p>
+          <p className="mt-1 text-sm text-slate-500">每按一次「＋」就增加一件；有規格的商品才會跳出選擇框。</p>
         </div>
         <div className="rounded-full bg-emerald-50 px-4 py-2 font-black text-emerald-700">已選 {selections.length} / {activity.requiredCount} 件</div>
       </div>
@@ -174,7 +185,22 @@ export default function ActivitySelector({
                   {count > 0 && <div className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">✓ 已選 {count} 件</div>}
                 </div>
               </div>
-              <button type="button" disabled={cannotAdd} onClick={() => openAdd(relation)} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-600 px-4 py-3 text-center font-black text-white disabled:bg-slate-100 disabled:text-slate-400">{hasActivityPurchaseChoices(relation.product) ? "選尺寸／規格" : "加入活動"}</button>
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3">
+                <div>
+                  <div className="font-black">選擇數量</div>
+                  <div className="mt-1 text-xs font-bold text-slate-500">
+                    {hasActivityPurchaseChoices(relation.product) ? "按＋後選擇這一件的規格" : "每按一次＋增加一件"}
+                  </div>
+                </div>
+                <ActivityQuantityStepper
+                  value={count}
+                  compact
+                  decreaseDisabled={count === 0}
+                  increaseDisabled={cannotAdd}
+                  onDecrease={() => removeLastForProduct(relation.productId)}
+                  onIncrease={() => openAdd(relation)}
+                />
+              </div>
             </article>
           );
         })}
@@ -210,19 +236,25 @@ export default function ActivitySelector({
           {!activity.repeatable && <div className="mt-1 text-sm font-bold text-amber-700">每張訂單限用一組</div>}
           <div className="text-2xl font-black text-rose-600">NT${currency.format(activity.price * groupQuantity)}</div>
         </div>
-        <div className="inline-flex overflow-hidden rounded-xl border bg-white">
-          <button type="button" onClick={() => setGroupQuantity((value) => Math.max(1, value - 1))} className="h-11 w-11 font-bold">−</button>
-          <div className="grid h-11 min-w-12 place-items-center border-x font-bold">{groupQuantity}</div>
-          <button type="button" disabled={!activity.repeatable} onClick={() => setGroupQuantity((value) => Math.min(99, value + 1))} className="h-11 w-11 font-bold disabled:text-slate-300">＋</button>
-        </div>
+        <ActivityQuantityStepper
+          value={groupQuantity}
+          compact
+          decreaseDisabled={groupQuantity <= 1}
+          increaseDisabled={!activity.repeatable || groupQuantity >= 99}
+          onDecrease={() => setGroupQuantity((value) => Math.max(1, value - 1))}
+          onIncrease={() => setGroupQuantity((value) => Math.min(99, value + 1))}
+        />
       </div>
 
       {message && <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center font-bold text-amber-700">{message}</div>}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {editCartId && <button type="button" onClick={() => router.push(`/cart?focus=${encodeURIComponent(editCartId)}`)} className="rounded-2xl border-2 border-slate-300 px-5 py-4 text-lg font-black text-slate-700">取消修改</button>}
-        <button type="button" onClick={() => submit(Boolean(editCartId))} className="rounded-2xl border-2 border-emerald-600 px-5 py-4 text-lg font-black text-emerald-700">{editCartId ? "儲存修改並返回購物車" : "加入購物車"}</button>
-        {!editCartId && <button type="button" onClick={() => submit(true)} className="rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white">加入並前往購物車</button>}
+        <button type="button" onClick={() => submit(Boolean(editCartId))} className="shopping-action-button flex items-center justify-center gap-2 rounded-2xl border-2 border-emerald-600 text-emerald-700">
+          {!editCartId && <span aria-hidden="true">🛒</span>}
+          <span>{editCartId ? "儲存修改並返回購物車" : "加入購物車"}</span>
+        </button>
+        {!editCartId && <button type="button" onClick={() => submit(true)} className="shopping-action-button rounded-2xl bg-[#d62872] text-white shadow-sm transition hover:bg-[#bd1f63] active:bg-[#a91856]">直接購買</button>}
       </div>
     </div>
   );
