@@ -95,6 +95,7 @@ export async function ProductPage({
         )
       : undefined;
   const isExclusiveCatalogView = Boolean(exclusiveActivityHref && !activityRelation);
+  const hasValidPrice = Number.isFinite(product.price) && product.price > 0;
 
   const media = Array.isArray(product.media)
     ? product.media
@@ -165,7 +166,11 @@ export async function ProductPage({
               </div>
             ) : (
             <div className="my-5">
-              {product.salePrice ? (
+              {!hasValidPrice ? (
+                <div className="text-xl font-black text-amber-700">
+                  請選擇規格
+                </div>
+              ) : product.salePrice ? (
                 <>
                   <div className="text-sm text-slate-400 line-through">
                     原價 NT${currency.format(product.basePrice ?? product.price)}

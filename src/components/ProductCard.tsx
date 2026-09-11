@@ -78,6 +78,7 @@ export default function ProductCard({
 }) {
   const price = product.salePrice ?? product.price;
   const originalPrice = product.basePrice ?? product.price;
+  const hasValidPrice = Number.isFinite(price) && price > 0;
   const productHref = href || productPath(product.id, product.name);
   const purchaseHref = `${productHref}#product-purchase`;
   const descriptionPreview = productDescriptionText(product.description);
@@ -117,7 +118,11 @@ export default function ProductCard({
           <p className="mt-1 line-clamp-1 text-base text-slate-500">{descriptionPreview}</p>
         ) : null}
         <div className="mt-auto flex items-end justify-between gap-2 pt-3">
-          {product.salePrice ? (
+          {!hasValidPrice ? (
+            <div className="text-lg font-black leading-tight text-amber-700">
+              請選擇規格
+            </div>
+          ) : product.salePrice ? (
             <div>
               <div className="text-xs text-slate-400 line-through">
                 NT${currency.format(originalPrice)}

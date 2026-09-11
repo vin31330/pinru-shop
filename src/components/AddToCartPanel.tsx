@@ -159,6 +159,25 @@ export default function AddToCartPanel({
     selectedPlan,
     selectedPriceOption,
   );
+  const priceUnavailable =
+    !Number.isFinite(selectedGroupPrice) || selectedGroupPrice <= 0;
+
+  if (priceUnavailable) {
+    return (
+      <div
+        id={purchaseId}
+        data-product-purchase
+        className="scroll-mt-40 rounded-3xl border-2 border-amber-300 bg-amber-50 p-5 text-center shadow-sm md:scroll-mt-24"
+      >
+        <h2 className="text-xl font-black text-amber-800">
+          規格與價格資料暫時無法讀取
+        </h2>
+        <p className="mt-2 leading-7 text-amber-800">
+          為避免選錯規格或金額，這項商品目前暫停加入購物車，請稍後重新整理頁面。
+        </p>
+      </div>
+    );
+  }
 
   function updateSelection(itemIndex: number, groupName: string, value: string) {
     setAdded(false);
@@ -220,12 +239,15 @@ export default function AddToCartPanel({
 
           focusCartId = makeCartId(product.id, selectedOptions);
           const priceResolution = resolveProductPrice(product, selectedOptions);
+          if (!priceResolution.ok) {
+            throw new Error(priceResolution.error);
+          }
           addProductToCart(
             product,
             1,
             selectedOptions,
-            selectedGroupPrice,
-            priceResolution.ok ? priceResolution.originalPrice : selectedGroupPrice,
+            priceResolution.price,
+            priceResolution.originalPrice,
           );
         });
 
@@ -257,12 +279,16 @@ export default function AddToCartPanel({
       const cartId = makeCartId(product.id, selectedOptions);
       setLastCartId(cartId);
       const priceResolution = resolveProductPrice(product, selectedOptions);
+      if (!priceResolution.ok) {
+        setActionError(priceResolution.error);
+        return;
+      }
       addProductToCart(
         product,
         groupQuantity,
         selectedOptions,
-        selectedGroupPrice,
-        priceResolution.ok ? priceResolution.originalPrice : selectedGroupPrice,
+        priceResolution.price,
+        priceResolution.originalPrice,
       );
 
       if (goToCart) {
@@ -272,9 +298,11 @@ export default function AddToCartPanel({
 
       setAdded(true);
       window.setTimeout(() => setAdded(false), 2200);
-    } catch {
+    } catch (error) {
       setActionError(
-        "目前無法把商品存進購物車，請重新整理頁面後再試一次。",
+        error instanceof Error
+          ? error.message
+          : "目前無法把商品存進購物車，請重新整理頁面後再試一次。",
       );
     }
   }

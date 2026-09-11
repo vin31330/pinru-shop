@@ -106,12 +106,12 @@ async function buildPublishedProducts(): Promise<Product[]> {
     settings,
   ] = await Promise.all([
     readSheet(SHEET_NAMES.products),
-    readSheet(SHEET_NAMES.media).catch(() => []),
-    readSheet(SHEET_NAMES.options).catch(() => []),
-    readSheet(SHEET_NAMES.pricingPlans).catch(() => []),
-    readSheet(SHEET_NAMES.pricingPlanOptions).catch(() => []),
-    readSheet(SHEET_NAMES.activities).catch(() => []),
-    readSheet(SHEET_NAMES.activityProducts).catch(() => []),
+    readSheet(SHEET_NAMES.media),
+    readSheet(SHEET_NAMES.options),
+    readSheet(SHEET_NAMES.pricingPlans),
+    readSheet(SHEET_NAMES.pricingPlanOptions),
+    readSheet(SHEET_NAMES.activities),
+    readSheet(SHEET_NAMES.activityProducts),
     getHomepageProductEntries(),
     getSiteSettings(),
   ]);
@@ -516,7 +516,7 @@ async function buildPublishedProducts(): Promise<Product[]> {
 
 const getPublishedProductsCached = unstable_cache(
   buildPublishedProducts,
-  ["pinru-published-products-v6-2"],
+  ["pinru-published-products-v6-4"],
   { revalidate: 60 },
 );
 

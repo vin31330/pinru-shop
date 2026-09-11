@@ -1,4 +1,6 @@
 const SHEET_REVALIDATE_SECONDS = 60;
+const SHEET_READ_MAX_ATTEMPTS = 3;
+const SHEET_RETRY_DELAYS_MS = [400, 1000];
 
 const SHEET_ID =
   process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID ??
@@ -62,26 +64,73 @@ function cleanCell(value: string): string {
   return value.replace(/^\uFEFF/, "").trim();
 }
 
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+async function fetchSheetCsv(sheetName: string): Promise<string> {
+  const baseUrl =
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
+    `?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < SHEET_READ_MAX_ATTEMPTS; attempt += 1) {
+    let response: Response;
+
+    try {
+      // Retry requests use a separate cache key. This prevents a temporary
+      // 429/5xx response from being reused for every retry attempt.
+      const retryQuery = attempt === 0 ? "" : `&pinru_retry=${attempt}`;
+      response = await fetch(`${baseUrl}${retryQuery}`, {
+        cache: "force-cache",
+        next: { revalidate: SHEET_REVALIDATE_SECONDS },
+        headers: { Accept: "text/csv,text/plain,*/*" },
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < SHEET_READ_MAX_ATTEMPTS - 1) {
+        await wait(SHEET_RETRY_DELAYS_MS[attempt] ?? 1000);
+        continue;
+      }
+
+      break;
+    }
+
+    if (response.ok) {
+      return response.text();
+    }
+
+    const error = new Error(
+      `無法讀取工作表「${sheetName}」，HTTP ${response.status}。`,
+    );
+
+    if (!isRetryableStatus(response.status)) {
+      throw error;
+    }
+
+    lastError = error;
+
+    if (attempt < SHEET_READ_MAX_ATTEMPTS - 1) {
+      await wait(SHEET_RETRY_DELAYS_MS[attempt] ?? 1000);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new Error(`無法讀取工作表「${sheetName}」。`);
+}
+
 export async function readSheet(
   sheetName: string,
 ): Promise<Record<string, string>[]> {
-  const url =
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
-    `?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-
-  const response = await fetch(url, {
-    cache: "force-cache",
-    next: { revalidate: SHEET_REVALIDATE_SECONDS },
-    headers: { Accept: "text/csv,text/plain,*/*" },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `無法讀取工作表「${sheetName}」，HTTP ${response.status}。`,
-    );
-  }
-
-  const csv = await response.text();
+  const csv = await fetchSheetCsv(sheetName);
 
   if (
     csv.includes("<!DOCTYPE html") ||
@@ -114,7 +163,17 @@ export async function readSheet(
   );
 
   const effectiveHeaderIndex = headerIndex >= 0 ? headerIndex : 0;
-  const headers = rows[effectiveHeaderIndex] ?? [];
+  const headers = [...(rows[effectiveHeaderIndex] ?? [])];
+
+  // The current Pricing Plans sheet contains plan IDs in column A, but the
+  // first header cell is blank. Recover only this known required header so
+  // valid plan rows are not silently discarded downstream.
+  if (
+    sheetName.trim().toLowerCase() === SHEET_NAMES.pricingPlans.toLowerCase() &&
+    !headers[0]
+  ) {
+    headers[0] = "方案ID";
+  }
 
   return rows.slice(effectiveHeaderIndex + 1).map((cells) =>
     Object.fromEntries(
